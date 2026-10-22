@@ -26,8 +26,8 @@ button,input,select,textarea{font:inherit;color:inherit}
 /* login */
 #login{min-height:100vh;min-height:100dvh;display:grid;grid-template-columns:5fr 4fr}
 .l-left{position:relative;overflow:hidden;background:var(--ink);color:#fff;display:flex;flex-direction:column;justify-content:space-between;padding:2.5rem 3rem}
-.l-badge{width:76px;height:76px;border-radius:50%;background:#fff;display:grid;place-items:center;position:relative;z-index:1}
-.l-badge img{width:58px;height:58px;object-fit:contain}
+.l-badge{width:120px;position:relative;z-index:1}
+.l-badge img{display:block;width:100%;height:auto}
 .l-copy{position:relative;z-index:1;max-width:460px}
 .l-copy h1{font-size:clamp(2.6rem,5vw,4.2rem);font-weight:800;line-height:.98;margin:0 0 1rem}
 .l-copy p{margin:0;font-size:1.1rem;color:#d4d4d0;max-width:380px}
@@ -51,7 +51,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 @media(max-width:760px){
   #login{grid-template-columns:1fr;grid-template-rows:auto 1fr}
   .l-left{flex-direction:row;align-items:center;gap:1rem;justify-content:flex-start;padding:calc(1.2rem + env(safe-area-inset-top)) 1.2rem 2.6rem}
-  .l-badge{width:56px;height:56px;flex:none}.l-badge img{width:42px;height:42px}
+  .l-badge{width:70px;flex:none}
   .l-copy h1{font-size:1.9rem;margin:0}.l-copy p,.l-foot{display:none}
   .iris{width:170px;height:170px;right:-60px;top:-60px;bottom:auto}
   .l-right{align-items:flex-start;margin-top:-1.4rem;border-radius:20px 20px 0 0;position:relative;padding:1.8rem 1.4rem calc(1.5rem + env(safe-area-inset-bottom))}
@@ -136,7 +136,7 @@ td[data-label=""]::before{display:none}
 <!-- LOGIN -->
 <section id="login" class="hide">
   <div class="l-left">
-    <div class="l-badge"><img src="logo.gif" alt="SYNTESYS"></div>
+<div class="l-badge"><img src="logo-claro.png" alt="SYNTESYS"></div>
     <div class="l-copy">
       <h1>Registro de tiempos</h1>
       <p>Anota el tiempo que dedicas a cada centro de costos y mantén al día la información de nuestros clientes.</p>
