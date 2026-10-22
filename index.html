@@ -116,7 +116,7 @@ td[data-label=""]::before{display:none}
   .card{padding:1rem}
   h2{font-size:1.6rem}
   .btn{width:100%}
-  #xBtn{margin-top:.6rem}
+  #xBtn,#dClr{margin-top:.6rem}
   .tot b{font-size:1.8rem}
   #toast{bottom:calc(5.5rem + env(safe-area-inset-bottom))}
   body.solo #toast{bottom:1.2rem}
@@ -246,8 +246,12 @@ input[type="date"]::-webkit-calendar-picker-indicator{margin:0;padding:0}
         <div class="grid">
           <div class="f"><label for="dD">Desde</label><input id="dD" type="date"></div>
           <div class="f"><label for="dH">Hasta</label><input id="dH" type="date"></div>
+          <div class="f"><label for="dU">Usuario</label><select id="dU"><option value="">Todos</option></select></div>
+          <div class="f"><label for="dC">Centro de costos</label>
+            <div class="ac"><input id="dC" placeholder="Todos" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false"><div class="ac-list hide" id="dCl" role="listbox"></div></div></div>
         </div>
         <button class="btn" id="dBtn">Actualizar</button>
+        <button class="btn dark" id="dClr">Quitar filtros</button>
       </div>
       <div class="kpis">
         <div class="kpi"><span>Total horas</span><b id="kH">0</b></div>
@@ -420,6 +424,7 @@ function autocomplete(input, list){
 }
 autocomplete($('#rC'), $('#rCl'));
 autocomplete($('#cC'), $('#cCl'));
+autocomplete($('#dC'), $('#dCl'));
 
 /* ---------- Registrar tiempo ---------- */
 $('#rBtn').onclick = async () => {
@@ -452,7 +457,9 @@ $('#mine').onclick = async e => {
 async function loadUsers(){
   const s = await db.collection('users').get();
   users = s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.nombre.localeCompare(b.nombre));
-  $('#cU').innerHTML = '<option value="">Todos</option>' + users.map(u=>`<option value="${u.id}">${esc(u.nombre)}</option>`).join('');
+  const opt = '<option value="">Todos</option>' + users.map(u=>`<option value="${u.id}">${esc(u.nombre)}</option>`).join('');
+  $('#cU').innerHTML = opt;
+  const dv = $('#dU').value; $('#dU').innerHTML = opt; $('#dU').value = dv;
   $('#uList').innerHTML = `<table><tr><th>Nombre</th><th>Correo</th><th>Rol</th></tr>${users.map(u=>`<tr><td>${esc(u.nombre)}</td><td>${esc(u.email)}</td><td>${esc(u.rol)}</td></tr>`).join('')}</table>`; rs($('#uList'));
 }
 $('#cBtn').onclick = async () => {
@@ -492,10 +499,12 @@ const cut = (s,n) => s.length>n ? s.slice(0,n-1)+'…' : s;
 async function loadDash(){
   if(!window.Chart) return toast('No se pudo cargar la librería de gráficas. Revisa tu internet.', true);
   const d=$('#dD').value, h=$('#dH').value; if(!d||!h) return toast('Indica el rango de fechas.', true);
+  const fu = $('#dU').value, fc = $('#dC').value.trim();
+  if(fc && !centros.includes(fc)) return toast('Elige un centro de costos de la lista o deja el campo vacío.', true);
   let rows;
   try{
     const s = await db.collection('registros').where('fecha','>=',d).where('fecha','<=',h).get();
-    rows = s.docs.map(x=>x.data());
+    rows = s.docs.map(x=>x.data()).filter(r=>(!fu||r.uid===fu)&&(!fc||r.centro===fc));
   }catch(e){ return toast('No se pudo cargar el dashboard: '+e.message, true); }
   const grp = k => { const m={}; rows.forEach(r=>{ m[r[k]]=(m[r[k]]||0)+r.minutos/60; }); return Object.entries(m).sort((a,b)=>b[1]-a[1]); };
   const byC = grp('centro'), byU = grp('nombre'), byD = grp('fecha').sort((a,b)=>a[0].localeCompare(b[0]));
@@ -520,6 +529,7 @@ async function loadDash(){
     options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom', labels:{boxWidth:12}}}}});
 }
 $('#dBtn').onclick = loadDash;
+$('#dClr').onclick = () => { $('#dU').value=''; $('#dC').value=''; loadDash(); };
 
 /* ---------- Crear usuarios ---------- */
 $('#uBtn').onclick = async () => {
