@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#2a2a2d">
-<link rel="manifest" href="manifest.webmanifest">
-<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest?v=3">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=3">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Tiempos">
@@ -162,6 +162,15 @@ input[type="date"]::-webkit-calendar-picker-indicator{margin:0;padding:0}
   nav button{font-size:.95rem;padding:.75rem .1rem}
 }
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+/* ===== Botón Salir compacto + confirmación ===== */
+header #out{width:auto;min-height:34px;padding:.25rem .7rem;font-size:.9rem;border-radius:6px;box-shadow:0 2px 0 var(--sunD);flex:none}
+#cfm{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:1rem;z-index:20}
+#cfm .box{background:#fff;border-radius:12px;border-top:6px solid var(--sun);padding:1.3rem 1.4rem;max-width:360px;width:100%;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.3)}
+#cfm h3{font-size:1.5rem;margin-bottom:.4rem}
+#cfm p{margin:0 0 1.1rem;color:var(--mut)}
+#cfm .acts{display:flex;gap:.6rem}
+#cfm .acts .btn{flex:1;width:auto;min-height:44px;font-size:1.1rem}
+#cfm .btn.cancel{background:#fff;color:var(--ink);border:2px solid var(--line);box-shadow:none}
 </style>
 </head>
 <body>
@@ -295,6 +304,16 @@ input[type="date"]::-webkit-calendar-picker-indicator{margin:0;padding:0}
     </section>
   </main>
 </div>
+<div id="cfm" class="hide" role="dialog" aria-modal="true" aria-labelledby="cfmT">
+  <div class="box">
+    <h3 id="cfmT">¿Cerrar sesión?</h3>
+    <p>Vas a salir de tu cuenta. ¿Deseas continuar?</p>
+    <div class="acts">
+      <button class="btn cancel" id="cfmNo" type="button">Cancelar</button>
+      <button class="btn dark" id="cfmYes" type="button">Sí, salir</button>
+    </div>
+  </div>
+</div>
 <div id="toast" class="hide"></div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -368,7 +387,11 @@ $('#lReset').onclick = async () => {
   const m = $('#lE').value.trim(); if(!m) return toast('Escribe tu correo y vuelve a pulsar.', true);
   try{ await auth.sendPasswordResetEmail(m); toast('Te enviamos un correo para restablecer la contraseña.'); }catch(e){ toast('No se pudo enviar el correo.', true); }
 };
-$('#out').onclick = () => auth.signOut();
+$('#out').onclick = () => { $('#cfm').classList.remove('hide'); $('#cfmNo').focus(); };
+$('#cfmNo').onclick = () => $('#cfm').classList.add('hide');
+$('#cfm').onclick = e => { if(e.target.id==='cfm') $('#cfm').classList.add('hide'); };
+$('#cfmYes').onclick = () => { $('#cfm').classList.add('hide'); auth.signOut(); };
+document.addEventListener('keydown', e => { if(e.key==='Escape') $('#cfm').classList.add('hide'); });
 
 /* ---------- Centros de costos ---------- */
 async function loadCentros(){
