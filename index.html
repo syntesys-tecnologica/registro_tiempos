@@ -99,9 +99,7 @@ td.obs{min-width:220px}
 html{-webkit-text-size-adjust:100%}
 body{-webkit-tap-highlight-color:transparent;padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}
 header{padding-top:calc(.6rem + env(safe-area-inset-top))}
-input,select,textarea,.btn{min-height:46px}
-  input,select,.btn{min-height:46px}
-textarea{min-height:92px}
+input,select,.btn{min-height:46px}
 .lnk{min-height:44px;padding:0 .4rem}
 #login{min-height:100vh;min-height:100dvh}
 td[data-label=""]::before{display:none}
@@ -130,6 +128,7 @@ td[data-label=""]::before{display:none}
   table.rs td::before{content:attr(data-label);font-weight:600;min-width:92px;color:var(--mut)}
   td.obs{min-width:0}
 }
+/* Autocompletado de centros de costos */
 .ac{position:relative}
 .ac-list{position:absolute;left:0;right:0;top:100%;margin-top:4px;background:#fff;border:1.5px solid var(--ink);border-radius:8px;
   max-height:min(40vh,280px);overflow-y:auto;-webkit-overflow-scrolling:touch;z-index:20;box-shadow:0 8px 20px rgba(0,0,0,.15)}
@@ -137,7 +136,7 @@ td[data-label=""]::before{display:none}
 .ac-item:last-child{border-bottom:0}
 .ac-item:hover,.ac-item.on{background:var(--sun)}
 .ac-empty{padding:.8rem;color:var(--mut);font-size:.92rem}
-  /* Campos de fecha con el mismo tamaño que los demás en móvil */
+/* Campos de fecha con el mismo tamaño que los demás en móvil */
 input[type="date"]{
   -webkit-appearance:none;appearance:none;
   display:block;width:100%;min-width:0;max-width:100%;
@@ -150,6 +149,18 @@ input[type="date"]{
 input[type="date"]::-webkit-date-and-time-value{text-align:left;min-height:1.2em;margin:0}
 input[type="date"]::-webkit-datetime-edit{padding:0}
 input[type="date"]::-webkit-calendar-picker-indicator{margin:0;padding:0}
+/* Dashboard */
+.kpis{display:grid;gap:.8rem;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin-bottom:1.2rem}
+.kpi{background:var(--ink);color:#fff;border-radius:10px;padding:.9rem 1rem;border-bottom:4px solid var(--sun)}
+.kpi span{display:block;font-size:.85rem;color:#d4d4d0}
+.kpi b{font-family:'Barlow Condensed';font-size:2.2rem;font-weight:800;color:var(--sun);line-height:1.1}
+.chbox{position:relative;height:300px;margin-top:.6rem}
+.dgrid{display:grid;gap:1.2rem;grid-template-columns:2fr 1fr}
+@media(max-width:760px){
+  .dgrid{grid-template-columns:1fr}
+  .chbox{height:260px}
+  nav button{font-size:.95rem;padding:.75rem .1rem}
+}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
@@ -161,7 +172,7 @@ input[type="date"]::-webkit-calendar-picker-indicator{margin:0;padding:0}
 <div class="l-badge"><img src="logo.gif" alt="SYNTESYS"></div>
     <div class="l-copy">
       <h1>Registro de tiempos</h1>
-      <p>Registra el tiempo que dedicas a cada centro de costos y mantén al día la información.</p>
+      <p>Registra el tiempo que dedicas a cada centro de costos y mantén al día la información de nuestros clientes.</p>
     </div>
     <div class="l-foot">© SYNTESYS</div>
     <div class="iris" aria-hidden="true"></div>
@@ -228,6 +239,30 @@ input[type="date"]::-webkit-calendar-picker-indicator{margin:0;padding:0}
       </div>
     </section>
 
+    <!-- Dashboard -->
+    <section id="t-dash" class="hide">
+      <div class="card">
+        <h2 style="margin-bottom:1rem">Dashboard</h2>
+        <div class="grid">
+          <div class="f"><label for="dD">Desde</label><input id="dD" type="date"></div>
+          <div class="f"><label for="dH">Hasta</label><input id="dH" type="date"></div>
+        </div>
+        <button class="btn" id="dBtn">Actualizar</button>
+      </div>
+      <div class="kpis">
+        <div class="kpi"><span>Total horas</span><b id="kH">0</b></div>
+        <div class="kpi"><span>Registros</span><b id="kR">0</b></div>
+        <div class="kpi"><span>Personas activas</span><b id="kP">0</b></div>
+        <div class="kpi"><span>Centros de costos</span><b id="kC">0</b></div>
+        <div class="kpi"><span>Promedio h/persona</span><b id="kA">0</b></div>
+      </div>
+      <div class="card"><h3>Horas por centro de costos (top 10)</h3><div class="chbox"><canvas id="gC"></canvas></div></div>
+      <div class="dgrid">
+        <div class="card"><h3>Horas por día</h3><div class="chbox"><canvas id="gD"></canvas></div></div>
+        <div class="card"><h3>Horas por usuario</h3><div class="chbox"><canvas id="gU"></canvas></div></div>
+      </div>
+    </section>
+
     <!-- Centros -->
     <section id="t-cc" class="hide">
       <div class="card">
@@ -248,7 +283,7 @@ input[type="date"]::-webkit-calendar-picker-indicator{margin:0;padding:0}
           <div class="f"><label for="uN">Nombre completo</label><input id="uN"></div>
           <div class="f"><label for="uE">Correo</label><input id="uE" type="email"></div>
           <div class="f"><label for="uP">Contraseña inicial</label><input id="uP" type="text" placeholder="Mínimo 6 caracteres"></div>
-          <div class="f"><label for="uR">Rol</label><select id="uR"><option value="usuario">Usuario</option><option value="administrador">administrador</option></select></div>
+          <div class="f"><label for="uR">Rol</label><select id="uR"><option value="usuario">Usuario</option><option value="administrador">Administrador</option></select></div>
         </div>
         <button class="btn" id="uBtn">Crear usuario</button>
       </div>
@@ -262,6 +297,7 @@ input[type="date"]::-webkit-calendar-picker-indicator{margin:0;padding:0}
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
 <script>
 const HOJA = "Matriz Centros Costos";
 /* ====== 1. PEGA AQUÍ LA CONFIGURACIÓN DE TU PROYECTO FIREBASE ====== */
@@ -294,9 +330,9 @@ auth.onAuthStateChanged(async u => {
     me = {uid:u.uid, ...d.data()};
   }catch(e){ toast('No se pudo cargar tu perfil: '+e.message, true); return auth.signOut(); }
   $('#login').classList.add('hide'); $('#app').classList.remove('hide');
-  $('#wN').textContent = me.nombre; $('#wR').textContent = sup() ? 'administrador' : 'Usuario';
+  $('#wN').textContent = me.nombre; $('#wR').textContent = sup() ? 'Administrador' : 'Usuario';
   const tabs = [['reg','Registrar']];
-  if(sup()) tabs.push(['con','Consultar'],['cc','Centros'],['usr','Usuarios']);
+  if(sup()) tabs.push(['con','Consultar'],['dash','Dashboard'],['cc','Centros'],['usr','Usuarios']);
   $('#nav').innerHTML = tabs.map(t=>`<button data-t="${t[0]}">${t[1]}</button>`).join('');
   $('#nav').classList.toggle('hide',tabs.length===1); document.body.classList.toggle('solo',tabs.length===1);
   $('#nav').onclick = e => e.target.dataset.t && go(e.target.dataset.t);
@@ -308,9 +344,10 @@ function rs(el){ const t=el.querySelector('table'); if(!t) return; t.classList.a
   const h=[...t.rows[0].cells].map(c=>c.textContent);
   [...t.rows].slice(1).forEach(r=>[...r.cells].forEach((c,i)=>c.dataset.label=h[i]||'')); }
 function go(t){
-  ['reg','con','cc','usr'].forEach(x=>$('#t-'+x).classList.toggle('hide',x!==t));
+  ['reg','con','dash','cc','usr'].forEach(x=>$('#t-'+x).classList.toggle('hide',x!==t));
   document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
   if(t==='reg') loadMine();
+  if(t==='dash') loadDash();
 }
 const lErr = m => { const e=$('#lErr'); e.textContent=m; e.classList.toggle('hide',!m); };
 $('#lBtn').onclick = async () => {
@@ -350,6 +387,7 @@ $('#ccBtn').onclick = async () => {
     await loadCentros(); toast(`Lista actualizada: ${lista.length} centros de costos.`);
   }catch(e){ toast('No se pudo leer el archivo: '+e.message, true); }
 };
+
 /* ---------- Autocompletado propio (funciona en móvil) ---------- */
 const norm = s => String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
 function autocomplete(input, list){
@@ -382,6 +420,7 @@ function autocomplete(input, list){
 }
 autocomplete($('#rC'), $('#rCl'));
 autocomplete($('#cC'), $('#cCl'));
+
 /* ---------- Registrar tiempo ---------- */
 $('#rBtn').onclick = async () => {
   const r = {fecha:$('#rF').value, centro:$('#rC').value.trim(), cantidad:parseFloat($('#rQ').value), unidad:$('#rU').value, obs:$('#rO').value.trim()};
@@ -433,7 +472,7 @@ $('#xBtn').onclick = () => {
   if(!found.length) return toast('Primero consulta para tener datos que exportar.', true);
   const data = found.map(r=>({Fecha:r.fecha, Usuario:r.nombre, 'Centro de costos':r.centro, Cantidad:r.cantidad, Unidad:r.unidad, 'Horas equivalentes':+(r.minutos/60).toFixed(2), Observaciones:r.obs}));
   const ws = XLSX.utils.json_to_sheet(data); ws['!cols']=[{wch:12},{wch:26},{wch:34},{wch:10},{wch:10},{wch:18},{wch:60}];
-    /* Fila de total al final de "Horas equivalentes" */
+  /* Fila de total al final de "Horas equivalentes" */
   const n = data.length, fila = n + 2;
   const suma = +data.reduce((t,r)=>t+r['Horas equivalentes'],0).toFixed(2);
   ws['E'+fila] = {t:'s', v:'TOTAL HORAS'};
@@ -442,6 +481,45 @@ $('#xBtn').onclick = () => {
   const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Registros');
   XLSX.writeFile(wb, `Registro_tiempos_${$('#cD').value}_a_${$('#cH').value}.xlsx`);
 };
+
+/* ---------- Dashboard ---------- */
+const charts = {};
+const PAL = ['#2a2a2d','#FFE600','#6b6b70','#e6cf00','#4a4a4f','#bdbdb6','#8a7f00','#a5a5a0','#d4d4d0'];
+if(window.Chart) Chart.defaults.font.family = "'Barlow',sans-serif";
+$('#dD').value = today().slice(0,8)+'01'; $('#dH').value = today();
+function drawChart(id, cfg){ if(charts[id]) charts[id].destroy(); charts[id] = new Chart($('#'+id), cfg); }
+const cut = (s,n) => s.length>n ? s.slice(0,n-1)+'…' : s;
+async function loadDash(){
+  if(!window.Chart) return toast('No se pudo cargar la librería de gráficas. Revisa tu internet.', true);
+  const d=$('#dD').value, h=$('#dH').value; if(!d||!h) return toast('Indica el rango de fechas.', true);
+  let rows;
+  try{
+    const s = await db.collection('registros').where('fecha','>=',d).where('fecha','<=',h).get();
+    rows = s.docs.map(x=>x.data());
+  }catch(e){ return toast('No se pudo cargar el dashboard: '+e.message, true); }
+  const grp = k => { const m={}; rows.forEach(r=>{ m[r[k]]=(m[r[k]]||0)+r.minutos/60; }); return Object.entries(m).sort((a,b)=>b[1]-a[1]); };
+  const byC = grp('centro'), byU = grp('nombre'), byD = grp('fecha').sort((a,b)=>a[0].localeCompare(b[0]));
+  const total = rows.reduce((t,r)=>t+r.minutos/60,0);
+  $('#kH').textContent = total.toFixed(1);
+  $('#kR').textContent = rows.length;
+  $('#kP').textContent = byU.length;
+  $('#kC').textContent = byC.length;
+  $('#kA').textContent = byU.length ? (total/byU.length).toFixed(1) : '0';
+  const r2 = v => +v.toFixed(2);
+
+  const top = byC.slice(0,10);
+  drawChart('gC', {type:'bar', data:{labels:top.map(x=>x[0]), datasets:[{label:'Horas', data:top.map(x=>r2(x[1])), backgroundColor:'#FFE600', borderColor:'#2a2a2d', borderWidth:1.5, borderRadius:4}]},
+    options:{indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+      scales:{y:{ticks:{callback:function(v){return cut(this.getLabelForValue(v),28);}}}, x:{beginAtZero:true}}}});
+
+  drawChart('gD', {type:'line', data:{labels:byD.map(x=>x[0]), datasets:[{label:'Horas', data:byD.map(x=>r2(x[1])), borderColor:'#2a2a2d', backgroundColor:'rgba(255,230,0,.35)', fill:true, tension:.3, pointBackgroundColor:'#FFE600', pointBorderColor:'#2a2a2d'}]},
+    options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}}}});
+
+  let us = byU.slice(0,8); const rest = byU.slice(8).reduce((t,x)=>t+x[1],0); if(rest>0) us.push(['Otros',rest]);
+  drawChart('gU', {type:'doughnut', data:{labels:us.map(x=>x[0]), datasets:[{data:us.map(x=>r2(x[1])), backgroundColor:PAL, borderColor:'#fff', borderWidth:2}]},
+    options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom', labels:{boxWidth:12}}}}});
+}
+$('#dBtn').onclick = loadDash;
 
 /* ---------- Crear usuarios ---------- */
 $('#uBtn').onclick = async () => {
