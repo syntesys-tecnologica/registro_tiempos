@@ -297,7 +297,7 @@ $('#lBtn').onclick = async () => {
   catch(e){ lErr(e.code==='auth/too-many-requests'?'Demasiados intentos. Espera unos minutos e inténtalo de nuevo.':e.code==='auth/network-request-failed'?'Sin conexión. Revisa tu internet.':'Correo o contraseña incorrectos.'); }
   b.disabled=false; b.classList.remove('load');
 };
-$('#lE').onkeydown = $('#lP').onkeydown = e => e.key==='Enter' && $('#lBtn').click();
+$('#lE').onkeydown = $('#lP').onkeydown = e => { if(e.key==='Enter') $('#lBtn').click(); };
 $('#lShow').onclick = () => { const i=$('#lP'),h=i.type==='password'; i.type=h?'text':'password'; $('#lShow').textContent=h?'Ocultar':'Mostrar'; };
 $('#lReset').onclick = async () => {
   const m = $('#lE').value.trim(); if(!m) return toast('Escribe tu correo y vuelve a pulsar.', true);
