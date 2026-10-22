@@ -128,6 +128,13 @@ td[data-label=""]::before{display:none}
   table.rs td::before{content:attr(data-label);font-weight:600;min-width:92px;color:var(--mut)}
   td.obs{min-width:0}
 }
+.ac{position:relative}
+.ac-list{position:absolute;left:0;right:0;top:100%;margin-top:4px;background:#fff;border:1.5px solid var(--ink);border-radius:8px;
+  max-height:min(40vh,280px);overflow-y:auto;-webkit-overflow-scrolling:touch;z-index:20;box-shadow:0 8px 20px rgba(0,0,0,.15)}
+.ac-item{padding:.7rem .8rem;border-bottom:1px solid var(--line);cursor:pointer;font-size:1rem;min-height:44px}
+.ac-item:last-child{border-bottom:0}
+.ac-item:hover,.ac-item.on{background:var(--sun)}
+.ac-empty{padding:.8rem;color:var(--mut);font-size:.92rem}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
@@ -172,7 +179,7 @@ td[data-label=""]::before{display:none}
         <div class="grid">
           <div class="f"><label for="rF">Fecha</label><input id="rF" type="date"></div>
           <div class="f"><label for="rC">Centro de costos</label>
-            <input id="rC" list="dl" placeholder="Escribe para buscar…" autocomplete="off"><datalist id="dl"></datalist></div>
+            <div class="ac"><input id="rC" placeholder="Escribe para buscar…" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false"><div class="ac-list hide" id="rCl" role="listbox"></div></div></div>
           <div class="f"><label for="rQ">Tiempo invertido</label>
             <div class="qty"><input id="rQ" type="number" inputmode="decimal" min="0.01" step="any" placeholder="Cantidad">
             <select id="rU" aria-label="Unidad"><option value="horas">Horas</option><option value="minutos">Minutos</option></select></div></div>
@@ -194,7 +201,8 @@ td[data-label=""]::before{display:none}
           <div class="f"><label for="cD">Desde</label><input id="cD" type="date"></div>
           <div class="f"><label for="cH">Hasta</label><input id="cH" type="date"></div>
           <div class="f"><label for="cU">Usuario</label><select id="cU"><option value="">Todos</option></select></div>
-          <div class="f"><label for="cC">Centro de costos</label><input id="cC" list="dl" placeholder="Todos" autocomplete="off"></div>
+          <div class="f"><label for="cC">Centro de costos</label>
+            <div class="ac"><input id="cC" placeholder="Todos" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false"><div class="ac-list hide" id="cCl" role="listbox"></div></div></div>
         </div>
         <button class="btn" id="cBtn">Consultar</button>
         <button class="btn dark" id="xBtn">Exportar a Excel</button>
@@ -311,7 +319,6 @@ async function loadCentros(){
   const d = await db.collection('config').doc('centros').get();
   const c = d.exists ? d.data() : {lista:[]};
   centros = c.lista || [];
-  $('#dl').innerHTML = centros.map(x=>`<option value="${esc(x)}">`).join('');
   $('#ccInfo').textContent = centros.length ? `${centros.length} centros de costos · actualizado ${c.actualizado ? new Date(c.actualizado).toLocaleString('es-CO') : ''}` : 'Aún no hay centros de costos cargados.';
   $('#ccList').innerHTML = centros.length ? centros.map(esc).join('<br>') : '';
 }
@@ -328,7 +335,38 @@ $('#ccBtn').onclick = async () => {
     await loadCentros(); toast(`Lista actualizada: ${lista.length} centros de costos.`);
   }catch(e){ toast('No se pudo leer el archivo: '+e.message, true); }
 };
-
+/* ---------- Autocompletado propio (funciona en móvil) ---------- */
+const norm = s => String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+function autocomplete(input, list){
+  let idx = -1;
+  const hide = () => { list.classList.add('hide'); idx = -1; };
+  const pick = v => { input.value = v; hide(); };
+  const render = () => {
+    const words = norm(input.value).split(/\s+/).filter(Boolean);
+    const m = (words.length ? centros.filter(c => { const n = norm(c); return words.every(w => n.includes(w)); }) : centros).slice(0,50);
+    idx = -1;
+    list.innerHTML = m.length
+      ? m.map(c => `<div class="ac-item" role="option" data-v="${esc(c)}">${esc(c)}</div>`).join('')
+      : '<div class="ac-empty">Sin coincidencias</div>';
+    list.classList.remove('hide'); list.scrollTop = 0;
+  };
+  input.addEventListener('input', render);
+  input.addEventListener('focus', () => { render(); setTimeout(()=>input.scrollIntoView({block:'center',behavior:'smooth'}),300); });
+  input.addEventListener('blur', () => setTimeout(hide, 200));
+  input.addEventListener('keydown', e => {
+    const it = [...list.querySelectorAll('.ac-item')];
+    if(e.key==='ArrowDown'||e.key==='ArrowUp'){
+      e.preventDefault(); if(!it.length) return;
+      idx = (idx + (e.key==='ArrowDown'?1:-1) + it.length) % it.length;
+      it.forEach((x,i)=>x.classList.toggle('on',i===idx)); it[idx].scrollIntoView({block:'nearest'});
+    } else if(e.key==='Enter' && idx>=0){ e.preventDefault(); pick(it[idx].dataset.v); }
+    else if(e.key==='Escape') hide();
+  });
+  list.addEventListener('mousedown', e => e.preventDefault());
+  list.addEventListener('click', e => { const t = e.target.closest('.ac-item'); if(t) pick(t.dataset.v); });
+}
+autocomplete($('#rC'), $('#rCl'));
+autocomplete($('#cC'), $('#cCl'));
 /* ---------- Registrar tiempo ---------- */
 $('#rBtn').onclick = async () => {
   const r = {fecha:$('#rF').value, centro:$('#rC').value.trim(), cantidad:parseFloat($('#rQ').value), unidad:$('#rU').value, obs:$('#rO').value.trim()};
