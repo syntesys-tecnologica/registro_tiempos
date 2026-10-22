@@ -193,7 +193,7 @@ td[data-label=""]::before{display:none}
       </div>
     </section>
 
-    <!-- Consulta supervisor -->
+    <!-- Consulta administrador -->
     <section id="t-con" class="hide">
       <div class="card">
         <h2 style="margin-bottom:1rem">Consultar registros</h2>
@@ -233,7 +233,7 @@ td[data-label=""]::before{display:none}
           <div class="f"><label for="uN">Nombre completo</label><input id="uN"></div>
           <div class="f"><label for="uE">Correo</label><input id="uE" type="email"></div>
           <div class="f"><label for="uP">Contraseña inicial</label><input id="uP" type="text" placeholder="Mínimo 6 caracteres"></div>
-          <div class="f"><label for="uR">Rol</label><select id="uR"><option value="usuario">Usuario</option><option value="supervisor">Supervisor</option></select></div>
+          <div class="f"><label for="uR">Rol</label><select id="uR"><option value="usuario">Usuario</option><option value="administrador">administrador</option></select></div>
         </div>
         <button class="btn" id="uBtn">Crear usuario</button>
       </div>
@@ -268,18 +268,18 @@ const toMin = r => r.unidad === 'horas' ? Math.round(r.cantidad*60) : Number(r.c
 let me = null, centros = [], users = [], found = [];
 
 function toast(msg, err){ const t=$('#toast'); t.textContent=msg; t.className=err?'err':''; setTimeout(()=>t.classList.add('hide'),4000); }
-const sup = () => me && me.rol === 'supervisor';
+const sup = () => me && me.rol === 'administrador';
 
 /* ---------- Sesión ---------- */
 auth.onAuthStateChanged(async u => {
   if(!u){ me=null; $('#lP').value=''; $('#lP').type='password'; $('#lShow').textContent='Mostrar'; $('#app').classList.add('hide'); $('#login').classList.remove('hide'); return; }
   try{
     const d = await db.collection('users').doc(u.uid).get();
-    if(!d.exists){ toast('Tu usuario no tiene perfil. Pide al supervisor que lo cree.', true); return auth.signOut(); }
+    if(!d.exists){ toast('Tu usuario no tiene perfil. Pide al administrador que lo cree.', true); return auth.signOut(); }
     me = {uid:u.uid, ...d.data()};
   }catch(e){ toast('No se pudo cargar tu perfil: '+e.message, true); return auth.signOut(); }
   $('#login').classList.add('hide'); $('#app').classList.remove('hide');
-  $('#wN').textContent = me.nombre; $('#wR').textContent = sup() ? 'Supervisor' : 'Usuario';
+  $('#wN').textContent = me.nombre; $('#wR').textContent = sup() ? 'administrador' : 'Usuario';
   const tabs = [['reg','Registrar']];
   if(sup()) tabs.push(['con','Consultar'],['cc','Centros'],['usr','Usuarios']);
   $('#nav').innerHTML = tabs.map(t=>`<button data-t="${t[0]}">${t[1]}</button>`).join('');
@@ -394,7 +394,7 @@ $('#mine').onclick = async e => {
   await db.collection('registros').doc(id).delete(); toast('Registro eliminado.'); loadMine();
 };
 
-/* ---------- Consulta supervisor ---------- */
+/* ---------- Consulta administrador ---------- */
 async function loadUsers(){
   const s = await db.collection('users').get();
   users = s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.nombre.localeCompare(b.nombre));
