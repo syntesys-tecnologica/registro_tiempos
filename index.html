@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2a2a2d">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Tiempos">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>SYNTESYS · Registro de tiempos</title>
+<link rel="icon" href="logo.gif">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#2a2a2d;--ink2:#4a4a4f;--sun:#FFE600;--sunD:#e6cf00;--bg:#f6f6f4;--card:#fff;--line:#deded9;--mut:#6b6b70;--err:#c0322b;--ok:#1d7a46}
+*{box-sizing:border-box}
+body{margin:0;font-family:'Barlow',system-ui,sans-serif;background:var(--bg);color:var(--ink);font-size:16px;line-height:1.45}
+h1,h2,h3,.brand{font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:.02em;margin:0}
+h2{font-size:1.9rem;font-weight:800}
+h3{font-size:1.3rem}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.hide{display:none!important}
+/* login */
+#login{min-height:100vh;min-height:100dvh;display:grid;grid-template-columns:5fr 4fr}
+.l-left{position:relative;overflow:hidden;background:var(--ink);color:#fff;display:flex;flex-direction:column;justify-content:space-between;padding:2.5rem 3rem}
+.l-badge{width:76px;height:76px;border-radius:50%;background:#fff;display:grid;place-items:center;position:relative;z-index:1}
+.l-badge img{width:58px;height:58px;object-fit:contain}
+.l-copy{position:relative;z-index:1;max-width:460px}
+.l-copy h1{font-size:clamp(2.6rem,5vw,4.2rem);font-weight:800;line-height:.98;margin:0 0 1rem}
+.l-copy p{margin:0;font-size:1.1rem;color:#d4d4d0;max-width:380px}
+.l-foot{position:relative;z-index:1;font-size:.85rem;color:#a5a5a0}
+.iris{position:absolute;right:-150px;bottom:-150px;width:480px;height:480px;border-radius:50%;
+  background:radial-gradient(circle,var(--ink) 0 12%,#fff 12% 14.5%,var(--ink) 14.5% 25%,var(--sun) 25%)}
+.l-right{display:flex;align-items:center;justify-content:center;padding:2rem;background:var(--bg)}
+.l-box{width:100%;max-width:400px}
+.l-box h2{font-size:2.3rem;margin-bottom:.3rem}
+.l-box .hint{margin:0 0 1.6rem;font-size:1rem}
+.pw{position:relative}
+.pw input{padding-right:5.2rem}
+.pw button{position:absolute;right:.35rem;top:50%;transform:translateY(-50%);background:none;border:0;cursor:pointer;font-weight:600;font-size:.88rem;color:var(--ink2);min-height:40px;padding:0 .6rem;border-radius:6px}
+.l-err{background:#fdecea;border-left:4px solid var(--err);color:#8c211b;padding:.65rem .8rem;border-radius:6px;font-size:.92rem;margin-bottom:1rem}
+.btn.load{color:transparent;position:relative;pointer-events:none}
+.btn.load::after{content:"";position:absolute;left:50%;top:50%;width:22px;height:22px;margin:-11px 0 0 -11px;border:3px solid var(--ink);border-right-color:transparent;border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.l-help{text-align:center;margin:1.4rem 0 0;font-size:.9rem;color:var(--mut)}
+.l-link{background:none;border:0;color:var(--ink);font-weight:600;text-decoration:underline;text-underline-offset:3px;cursor:pointer;min-height:44px;padding:0 .5rem}
+@media(max-width:900px){.l-left{padding:2rem}.iris{width:380px;height:380px;right:-130px;bottom:-130px}}
+@media(max-width:760px){
+  #login{grid-template-columns:1fr;grid-template-rows:auto 1fr}
+  .l-left{flex-direction:row;align-items:center;gap:1rem;justify-content:flex-start;padding:calc(1.2rem + env(safe-area-inset-top)) 1.2rem 2.6rem}
+  .l-badge{width:56px;height:56px;flex:none}.l-badge img{width:42px;height:42px}
+  .l-copy h1{font-size:1.9rem;margin:0}.l-copy p,.l-foot{display:none}
+  .iris{width:170px;height:170px;right:-60px;top:-60px;bottom:auto}
+  .l-right{align-items:flex-start;margin-top:-1.4rem;border-radius:20px 20px 0 0;position:relative;padding:1.8rem 1.4rem calc(1.5rem + env(safe-area-inset-bottom))}
+  .l-box h2{font-size:2rem}
+}
+/* header */
+header{background:var(--ink);color:#fff;display:flex;align-items:center;gap:1rem;padding:.6rem 1.2rem;border-bottom:4px solid var(--sun)}
+header img{height:44px;background:#fff;border-radius:50%;padding:3px}
+.brand{font-size:1.5rem;font-weight:800}
+.sp{flex:1}
+.who{font-size:.9rem;text-align:right;line-height:1.2}
+.who small{color:var(--sun)}
+nav{display:flex;gap:.3rem;padding:.8rem 1.2rem 0;max-width:1100px;margin:0 auto;flex-wrap:wrap}
+nav button{background:none;border:0;border-bottom:4px solid transparent;padding:.5rem .9rem;font-family:'Barlow Condensed';font-weight:700;font-size:1.2rem;cursor:pointer;color:var(--mut)}
+nav button.on{color:var(--ink);border-bottom-color:var(--sun)}
+main{max-width:1100px;margin:0 auto;padding:1rem 1.2rem 3rem}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:1.3rem;margin-bottom:1.2rem}
+/* forms */
+label{display:block;font-weight:600;font-size:.92rem;margin:0 0 .25rem}
+input,select,textarea{width:100%;padding:.65rem .75rem;border:1.5px solid #bdbdb6;border-radius:8px;background:#fff}
+input:focus,select:focus,textarea:focus{border-color:var(--ink)}
+textarea{min-height:92px;resize:vertical}
+.grid{display:grid;gap:1rem;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+.f{margin-bottom:1rem}
+.qty{display:grid;grid-template-columns:1fr 1fr;gap:.6rem}
+.btn{background:var(--sun);color:var(--ink);border:0;border-radius:8px;padding:.75rem 1.4rem;font-family:'Barlow Condensed';font-weight:800;font-size:1.25rem;letter-spacing:.03em;cursor:pointer;box-shadow:0 3px 0 var(--sunD)}
+.btn:active{transform:translateY(2px);box-shadow:none}
+.btn.dark{background:var(--ink);color:#fff;box-shadow:0 3px 0 #000}
+.btn.sm{font-size:1rem;padding:.45rem .9rem}
+.btn.full{width:100%}
+.lnk{background:none;border:0;color:var(--err);cursor:pointer;font-weight:600}
+.hint{color:var(--mut);font-size:.88rem;margin:.3rem 0 0}
+/* table */
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.93rem}
+th{font-family:'Barlow Condensed';font-size:1.05rem;text-align:left;background:var(--ink);color:#fff;padding:.55rem .7rem;white-space:nowrap}
+td{padding:.55rem .7rem;border-bottom:1px solid var(--line);vertical-align:top}
+td.obs{min-width:220px}
+.tot{display:flex;gap:1.5rem;flex-wrap:wrap;align-items:baseline;margin:.8rem 0}
+.tot b{font-family:'Barlow Condensed';font-size:2.2rem;background:var(--sun);padding:0 .5rem;border-radius:6px}
+.empty{padding:1.5rem;text-align:center;color:var(--mut)}
+#toast{position:fixed;bottom:1.2rem;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:.8rem 1.3rem;border-radius:8px;border-left:6px solid var(--sun);z-index:9;max-width:90vw}
+#toast.err{border-left-color:var(--err)}
+/* ===== Adaptación a móvil, tablet y PC ===== */
+html{-webkit-text-size-adjust:100%}
+body{-webkit-tap-highlight-color:transparent;padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}
+header{padding-top:calc(.6rem + env(safe-area-inset-top))}
+input,select,textarea,.btn{min-height:46px}
+.lnk{min-height:44px;padding:0 .4rem}
+#login{min-height:100vh;min-height:100dvh}
+td[data-label=""]::before{display:none}
+@media(min-width:761px) and (max-width:1024px){main,nav{max-width:900px}.btn{font-size:1.3rem}}
+@media(max-width:760px){
+  header{gap:.6rem;padding-left:.8rem;padding-right:.8rem}
+  header img{height:38px}.brand{display:none}
+  .who{font-size:.85rem}
+  nav{position:fixed;left:0;right:0;bottom:0;max-width:none;margin:0;padding:0 0 env(safe-area-inset-bottom);gap:0;flex-wrap:nowrap;background:#fff;border-top:3px solid var(--sun);z-index:5}
+  nav button{flex:1;border:0;padding:.75rem .2rem;font-size:1.05rem;color:var(--ink2)}
+  nav button.on{background:var(--sun);color:var(--ink)}
+  main{padding:.8rem .8rem calc(5.5rem + env(safe-area-inset-bottom))}
+  body.solo main{padding-bottom:2rem}
+  .card{padding:1rem}
+  h2{font-size:1.6rem}
+  .btn{width:100%}
+  #xBtn{margin-top:.6rem}
+  .tot b{font-size:1.8rem}
+  #toast{bottom:calc(5.5rem + env(safe-area-inset-bottom))}
+  body.solo #toast{bottom:1.2rem}
+  /* tablas convertidas en tarjetas */
+  table.rs,table.rs tbody,table.rs tr,table.rs td{display:block;width:100%}
+  table.rs tr:first-child{display:none}
+  table.rs tr{border:1px solid var(--line);border-radius:10px;margin-bottom:.7rem;padding:.4rem .2rem;background:#fff}
+  table.rs td{border:0;display:flex;gap:.6rem;padding:.3rem .7rem}
+  table.rs td::before{content:attr(data-label);font-weight:600;min-width:92px;color:var(--mut)}
+  td.obs{min-width:0}
+}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<section id="login" class="hide">
+  <div class="l-left">
+    <div class="l-badge"><img src="logo.gif" alt="SYNTESYS"></div>
+    <div class="l-copy">
+      <h1>Registro de tiempos</h1>
+      <p>Anota el tiempo que dedicas a cada centro de costos y mantén al día la información de nuestros clientes.</p>
+    </div>
+    <div class="l-foot">© SYNTESYS</div>
+    <div class="iris" aria-hidden="true"></div>
+  </div>
+  <div class="l-right"><div class="l-box">
+    <h2>Bienvenido</h2>
+    <p class="hint">Ingresa con el correo y la contraseña que te asignó el supervisor.</p>
+    <div id="lErr" class="l-err hide" role="alert"></div>
+    <div class="f"><label for="lE">Correo</label><input id="lE" type="email" autocomplete="username" inputmode="email" autocapitalize="none" spellcheck="false" placeholder="nombre@syntesys.co"></div>
+    <div class="f"><label for="lP">Contraseña</label>
+      <div class="pw"><input id="lP" type="password" autocomplete="current-password" placeholder="Tu contraseña"><button type="button" id="lShow" aria-label="Mostrar u ocultar contraseña">Mostrar</button></div></div>
+    <button class="btn full" id="lBtn">Ingresar</button>
+    <p class="l-help"><button class="l-link" id="lReset">Olvidé mi contraseña</button><br>¿No tienes acceso? Pídelo al supervisor.</p>
+  </div></div>
+</section>
+
+<!-- APP -->
+<div id="app" class="hide">
+  <header>
+    <img src="logo.gif" alt=""><span class="brand">SYNTESYS</span><span class="sp"></span>
+    <div class="who"><span id="wN"></span><br><small id="wR"></small></div>
+    <button class="btn sm" id="out">Salir</button>
+  </header>
+  <nav id="nav"></nav>
+  <main>
+    <!-- Registrar -->
+    <section id="t-reg">
+      <div class="card">
+        <h2 style="margin-bottom:1rem">Registrar tiempo</h2>
+        <div class="grid">
+          <div class="f"><label for="rF">Fecha</label><input id="rF" type="date"></div>
+          <div class="f"><label for="rC">Centro de costos</label>
+            <input id="rC" list="dl" placeholder="Escribe para buscar…" autocomplete="off"><datalist id="dl"></datalist></div>
+          <div class="f"><label for="rQ">Tiempo invertido</label>
+            <div class="qty"><input id="rQ" type="number" inputmode="decimal" min="0.01" step="any" placeholder="Cantidad">
+            <select id="rU" aria-label="Unidad"><option value="horas">Horas</option><option value="minutos">Minutos</option></select></div></div>
+        </div>
+        <div class="f"><label for="rO">Observaciones</label><textarea id="rO" placeholder="¿Qué hiciste en este centro de costos?"></textarea></div>
+        <button class="btn" id="rBtn">Guardar registro</button>
+      </div>
+      <div class="card">
+        <h3>Mis últimos registros</h3>
+        <div class="tw" id="mine"></div>
+      </div>
+    </section>
+
+    <!-- Consulta supervisor -->
+    <section id="t-con" class="hide">
+      <div class="card">
+        <h2 style="margin-bottom:1rem">Consultar registros</h2>
+        <div class="grid">
+          <div class="f"><label for="cD">Desde</label><input id="cD" type="date"></div>
+          <div class="f"><label for="cH">Hasta</label><input id="cH" type="date"></div>
+          <div class="f"><label for="cU">Usuario</label><select id="cU"><option value="">Todos</option></select></div>
+          <div class="f"><label for="cC">Centro de costos</label><input id="cC" list="dl" placeholder="Todos" autocomplete="off"></div>
+        </div>
+        <button class="btn" id="cBtn">Consultar</button>
+        <button class="btn dark" id="xBtn">Exportar a Excel</button>
+      </div>
+      <div class="card">
+        <div class="tot"><span>Registros: <b id="nR">0</b></span><span>Total horas: <b id="nH">0</b></span></div>
+        <div class="tw" id="res"></div>
+      </div>
+    </section>
+
+    <!-- Centros -->
+    <section id="t-cc" class="hide">
+      <div class="card">
+        <h2 style="margin-bottom:.4rem">Centros de costos</h2>
+        <p id="ccInfo" class="hint" style="font-size:1rem"></p>
+        <p>Descarga <b>Centros de Costos.xlsx</b> desde SharePoint y súbelo aquí. La app lee la hoja <b>Matriz centro de costos</b>, columna B, y actualiza la lista para todos los usuarios.</p>
+        <div class="f"><input id="ccF" type="file" accept=".xlsx,.xls"></div>
+        <button class="btn" id="ccBtn">Actualizar lista</button>
+      </div>
+      <div class="card"><h3>Lista actual</h3><div id="ccList" class="tw hint"></div></div>
+    </section>
+
+    <!-- Usuarios -->
+    <section id="t-usr" class="hide">
+      <div class="card">
+        <h2 style="margin-bottom:1rem">Crear usuario</h2>
+        <div class="grid">
+          <div class="f"><label for="uN">Nombre completo</label><input id="uN"></div>
+          <div class="f"><label for="uE">Correo</label><input id="uE" type="email"></div>
+          <div class="f"><label for="uP">Contraseña inicial</label><input id="uP" type="text" placeholder="Mínimo 6 caracteres"></div>
+          <div class="f"><label for="uR">Rol</label><select id="uR"><option value="usuario">Usuario</option><option value="supervisor">Supervisor</option></select></div>
+        </div>
+        <button class="btn" id="uBtn">Crear usuario</button>
+      </div>
+      <div class="card"><h3>Usuarios</h3><div class="tw" id="uList"></div></div>
+    </section>
+  </main>
+</div>
+<div id="toast" class="hide"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+/* ====== 1. PEGA AQUÍ LA CONFIGURACIÓN DE TU PROYECTO FIREBASE ====== */
+const firebaseConfig = {  apiKey: "AIzaSyAt0cASE-9C5ME7DgpU6xNdGgjd-rgfHFY",
+  authDomain: "registro-de-tiempos-bb27a.firebaseapp.com",
+  projectId: "registro-de-tiempos-bb27a",
+  storageBucket: "registro-de-tiempos-bb27a.firebasestorage.app",
+  messagingSenderId: "1002796271645",
+  appId: "1:1002796271645:web:2eacfd3ec1bded391f5ef4",
+  measurementId: "G-MMMD540VQ0"
+};
+/* ================================================================== */
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth(), db = firebase.firestore();
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const today = () => new Date(Date.now() - new Date().getTimezoneOffset()*60000).toISOString().slice(0,10);
+const toMin = r => r.unidad === 'horas' ? Math.round(r.cantidad*60) : Number(r.cantidad);
+let me = null, centros = [], users = [], found = [];
+
+function toast(msg, err){ const t=$('#toast'); t.textContent=msg; t.className=err?'err':''; setTimeout(()=>t.classList.add('hide'),4000); }
+const sup = () => me && me.rol === 'supervisor';
+
+/* ---------- Sesión ---------- */
+auth.onAuthStateChanged(async u => {
+  if(!u){ me=null; $('#lP').value=''; $('#lP').type='password'; $('#lShow').textContent='Mostrar'; $('#app').classList.add('hide'); $('#login').classList.remove('hide'); return; }
+  try{
+    const d = await db.collection('users').doc(u.uid).get();
+    if(!d.exists){ toast('Tu usuario no tiene perfil. Pide al supervisor que lo cree.', true); return auth.signOut(); }
+    me = {uid:u.uid, ...d.data()};
+  }catch(e){ toast('No se pudo cargar tu perfil: '+e.message, true); return auth.signOut(); }
+  $('#login').classList.add('hide'); $('#app').classList.remove('hide');
+  $('#wN').textContent = me.nombre; $('#wR').textContent = sup() ? 'Supervisor' : 'Usuario';
+  const tabs = [['reg','Registrar']];
+  if(sup()) tabs.push(['con','Consultar'],['cc','Centros'],['usr','Usuarios']);
+  $('#nav').innerHTML = tabs.map(t=>`<button data-t="${t[0]}">${t[1]}</button>`).join('');
+  $('#nav').classList.toggle('hide',tabs.length===1); document.body.classList.toggle('solo',tabs.length===1);
+  $('#nav').onclick = e => e.target.dataset.t && go(e.target.dataset.t);
+  $('#rF').value = today(); $('#cD').value = today().slice(0,8)+'01'; $('#cH').value = today();
+  await loadCentros(); go('reg');
+  if(sup()) loadUsers();
+});
+function rs(el){ const t=el.querySelector('table'); if(!t) return; t.classList.add('rs');
+  const h=[...t.rows[0].cells].map(c=>c.textContent);
+  [...t.rows].slice(1).forEach(r=>[...r.cells].forEach((c,i)=>c.dataset.label=h[i]||'')); }
+function go(t){
+  ['reg','con','cc','usr'].forEach(x=>$('#t-'+x).classList.toggle('hide',x!==t));
+  document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
+  if(t==='reg') loadMine();
+}
+const lErr = m => { const e=$('#lErr'); e.textContent=m; e.classList.toggle('hide',!m); };
+$('#lBtn').onclick = async () => {
+  const em=$('#lE').value.trim(), pw=$('#lP').value;
+  if(!em||!pw) return lErr('Escribe tu correo y tu contraseña.');
+  lErr(''); const b=$('#lBtn'); b.disabled=true; b.classList.add('load');
+  try{ await auth.signInWithEmailAndPassword(em,pw); }
+  catch(e){ lErr(e.code==='auth/too-many-requests'?'Demasiados intentos. Espera unos minutos e inténtalo de nuevo.':e.code==='auth/network-request-failed'?'Sin conexión. Revisa tu internet.':'Correo o contraseña incorrectos.'); }
+  b.disabled=false; b.classList.remove('load');
+};
+$('#lE').onkeydown = $('#lP').onkeydown = e => e.key==='Enter' && $('#lBtn').click();
+$('#lShow').onclick = () => { const i=$('#lP'),h=i.type==='password'; i.type=h?'text':'password'; $('#lShow').textContent=h?'Ocultar':'Mostrar'; };
+$('#lReset').onclick = async () => {
+  const m = $('#lE').value.trim(); if(!m) return toast('Escribe tu correo y vuelve a pulsar.', true);
+  try{ await auth.sendPasswordResetEmail(m); toast('Te enviamos un correo para restablecer la contraseña.'); }catch(e){ toast('No se pudo enviar el correo.', true); }
+};
+$('#out').onclick = () => auth.signOut();
+
+/* ---------- Centros de costos ---------- */
+async function loadCentros(){
+  const d = await db.collection('config').doc('centros').get();
+  const c = d.exists ? d.data() : {lista:[]};
+  centros = c.lista || [];
+  $('#dl').innerHTML = centros.map(x=>`<option value="${esc(x)}">`).join('');
+  $('#ccInfo').textContent = centros.length ? `${centros.length} centros de costos · actualizado ${c.actualizado ? new Date(c.actualizado).toLocaleString('es-CO') : ''}` : 'Aún no hay centros de costos cargados.';
+  $('#ccList').innerHTML = centros.length ? centros.map(esc).join('<br>') : '';
+}
+$('#ccBtn').onclick = async () => {
+  const f = $('#ccF').files[0]; if(!f) return toast('Selecciona el archivo Excel.', true);
+  try{
+    const wb = XLSX.read(await f.arrayBuffer());
+    const name = wb.SheetNames.find(n => n.trim().toLowerCase() === 'matriz centro de costos');
+    if(!name) return toast('No encontré la hoja "Matriz centro de costos".', true);
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[name], {header:1});
+    const lista = [...new Set(rows.slice(1).map(r => String(r[1] ?? '').trim()).filter(Boolean))];
+    if(!lista.length) return toast('La columna B no tiene datos.', true);
+    await db.collection('config').doc('centros').set({lista, actualizado: Date.now(), por: me.nombre});
+    await loadCentros(); toast(`Lista actualizada: ${lista.length} centros de costos.`);
+  }catch(e){ toast('No se pudo leer el archivo: '+e.message, true); }
+};
+
+/* ---------- Registrar tiempo ---------- */
+$('#rBtn').onclick = async () => {
+  const r = {fecha:$('#rF').value, centro:$('#rC').value.trim(), cantidad:parseFloat($('#rQ').value), unidad:$('#rU').value, obs:$('#rO').value.trim()};
+  if(!r.fecha) return toast('Selecciona la fecha.', true);
+  if(!centros.includes(r.centro)) return toast('Elige un centro de costos de la lista.', true);
+  if(!(r.cantidad > 0)) return toast('Escribe una cantidad mayor a cero.', true);
+  if(!r.obs) return toast('Cuéntanos qué hiciste en las observaciones.', true);
+  r.minutos = toMin(r);
+  try{
+    await db.collection('registros').add({...r, uid:me.uid, nombre:me.nombre, creado:Date.now()});
+    $('#rQ').value=''; $('#rO').value=''; $('#rC').value=''; toast('Registro guardado.'); loadMine();
+  }catch(e){ toast('No se pudo guardar: '+e.message, true); }
+};
+const fmtT = r => `${r.cantidad} ${r.unidad === 'horas' ? 'h' : 'min'}`;
+async function loadMine(){
+  const s = await db.collection('registros').where('uid','==',me.uid).get();
+  const l = s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>b.fecha.localeCompare(a.fecha)||b.creado-a.creado).slice(0,30);
+  $('#mine').innerHTML = l.length ? `<table><tr><th>Fecha</th><th>Centro de costos</th><th>Tiempo</th><th>Observaciones</th><th></th></tr>`+
+    l.map(r=>`<tr><td>${r.fecha}</td><td>${esc(r.centro)}</td><td>${fmtT(r)}</td><td class="obs">${esc(r.obs)}</td><td><button class="lnk" data-del="${r.id}">Eliminar</button></td></tr>`).join('')+'</table>'
+    : '<div class="empty">Aún no tienes registros. Completa el formulario de arriba.</div>';
+  rs($('#mine'));
+}
+$('#mine').onclick = async e => {
+  const id = e.target.dataset.del; if(!id || !confirm('¿Eliminar este registro?')) return;
+  await db.collection('registros').doc(id).delete(); toast('Registro eliminado.'); loadMine();
+};
+
+/* ---------- Consulta supervisor ---------- */
+async function loadUsers(){
+  const s = await db.collection('users').get();
+  users = s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.nombre.localeCompare(b.nombre));
+  $('#cU').innerHTML = '<option value="">Todos</option>' + users.map(u=>`<option value="${u.id}">${esc(u.nombre)}</option>`).join('');
+  $('#uList').innerHTML = `<table><tr><th>Nombre</th><th>Correo</th><th>Rol</th></tr>${users.map(u=>`<tr><td>${esc(u.nombre)}</td><td>${esc(u.email)}</td><td>${esc(u.rol)}</td></tr>`).join('')}</table>`; rs($('#uList'));
+}
+$('#cBtn').onclick = async () => {
+  const d=$('#cD').value, h=$('#cH').value; if(!d||!h) return toast('Indica el rango de fechas.', true);
+  const s = await db.collection('registros').where('fecha','>=',d).where('fecha','<=',h).get();
+  const u=$('#cU').value, c=$('#cC').value.trim();
+  found = s.docs.map(x=>({id:x.id,...x.data()})).filter(r=>(!u||r.uid===u)&&(!c||r.centro===c))
+    .sort((a,b)=>b.fecha.localeCompare(a.fecha)||a.nombre.localeCompare(b.nombre));
+  $('#nR').textContent = found.length;
+  $('#nH').textContent = (found.reduce((t,r)=>t+r.minutos,0)/60).toFixed(2);
+  $('#res').innerHTML = found.length ? `<table><tr><th>Fecha</th><th>Usuario</th><th>Centro de costos</th><th>Tiempo</th><th>Horas</th><th>Observaciones</th></tr>`+
+    found.map(r=>`<tr><td>${r.fecha}</td><td>${esc(r.nombre)}</td><td>${esc(r.centro)}</td><td>${fmtT(r)}</td><td>${(r.minutos/60).toFixed(2)}</td><td class="obs">${esc(r.obs)}</td></tr>`).join('')+'</table>'
+    : '<div class="empty">No hay registros con esos filtros. Prueba ampliando las fechas.</div>';
+  rs($('#res'));
+};
+$('#xBtn').onclick = () => {
+  if(!found.length) return toast('Primero consulta para tener datos que exportar.', true);
+  const data = found.map(r=>({Fecha:r.fecha, Usuario:r.nombre, 'Centro de costos':r.centro, Cantidad:r.cantidad, Unidad:r.unidad, 'Horas equivalentes':+(r.minutos/60).toFixed(2), Observaciones:r.obs}));
+  const ws = XLSX.utils.json_to_sheet(data); ws['!cols']=[{wch:12},{wch:26},{wch:34},{wch:10},{wch:10},{wch:18},{wch:60}];
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Registros');
+  XLSX.writeFile(wb, `Registro_tiempos_${$('#cD').value}_a_${$('#cH').value}.xlsx`);
+};
+
+/* ---------- Crear usuarios ---------- */
+$('#uBtn').onclick = async () => {
+  const n=$('#uN').value.trim(), e=$('#uE').value.trim(), p=$('#uP').value, rol=$('#uR').value;
+  if(!n||!e||p.length<6) return toast('Completa nombre, correo y una contraseña de mínimo 6 caracteres.', true);
+  try{
+    const sec = firebase.apps.find(a=>a.name==='sec') || firebase.initializeApp(firebaseConfig,'sec');
+    const cred = await sec.auth().createUserWithEmailAndPassword(e,p); await sec.auth().signOut();
+    await db.collection('users').doc(cred.user.uid).set({nombre:n,email:e,rol});
+    ['uN','uE','uP'].forEach(i=>$('#'+i).value=''); toast('Usuario creado.'); loadUsers();
+  }catch(err){ toast(err.code==='auth/email-already-in-use'?'Ese correo ya está registrado.':'No se pudo crear: '+err.message, true); }
+};
+if('serviceWorker' in navigator) window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+</script>
+</body>
+</html>
