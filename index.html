@@ -318,8 +318,8 @@ $('#ccBtn').onclick = async () => {
   const f = $('#ccF').files[0]; if(!f) return toast('Selecciona el archivo Excel.', true);
   try{
     const wb = XLSX.read(await f.arrayBuffer());
-    const name = wb.SheetNames.find(n => n.trim().toLowerCase() === 'matriz centro de costos');
-    if(!name) return toast('No encontré la hoja "Matriz centro de costos".', true);
+    const name = wb.SheetNames.find(n => n.trim().toLowerCase() === HOJA.toLowerCase());
+    if(!name) return toast('No encontré la hoja "'+HOJA+'".', true);
     const rows = XLSX.utils.sheet_to_json(wb.Sheets[name], {header:1});
     const lista = [...new Set(rows.slice(1).map(r => String(r[1] ?? '').trim()).filter(Boolean))];
     if(!lista.length) return toast('La columna B no tiene datos.', true);
