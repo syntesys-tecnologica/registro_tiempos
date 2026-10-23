@@ -161,7 +161,7 @@ input[type="date"]::-webkit-calendar-picker-indicator{margin:0;padding:0}
 @media(max-width:760px){
   .dgrid{grid-template-columns:1fr}
   .chbox{height:260px}
-  nav button{font-size:.85rem;padding:.75rem .1rem}
+  nav button{font-size:.95rem;padding:.75rem .1rem}
 }
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
 /* Estados, chips y botones nuevos */
@@ -199,6 +199,9 @@ header #out{box-shadow:0 2px 0 var(--sunD)}
   header #wN{display:inline-block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom}
   header #out,header #pwBtn{min-height:30px;padding:.2rem .55rem;font-size:.8rem}
 }
+.chk label{display:flex;align-items:center;gap:.6rem;font-weight:500;margin:.35rem 0;cursor:pointer}
+.chk input{width:22px;height:22px;min-height:22px;flex:none;accent-color:var(--ink)}
+.rsel{width:auto;min-height:38px;padding:.3rem .5rem}
 </style>
 </head>
 <body>
@@ -285,6 +288,18 @@ header #out{box-shadow:0 2px 0 var(--sunD)}
         <div class="tot"><span>Registros: <b id="nR">0</b></span><span>Total horas: <b id="nH">0</b></span></div>
         <div class="tw" id="res"></div>
       </div>
+      <div class="card">
+        <h3>Copia de seguridad</h3>
+        <p class="hint" style="font-size:1rem">Descarga todos los registros guardados, de todas las fechas y usuarios. Hazlo una vez al mes y guarda el archivo en SharePoint.</p>
+        <button class="btn dark" id="bkX" type="button" style="margin-top:.6rem">Descargar copia (Excel)</button>
+        <button class="btn dark" id="bkJ" type="button">Descargar copia (JSON)</button>
+        <hr style="border:0;border-top:1px solid var(--line);margin:1.2rem 0">
+        <h3 style="font-size:1.15rem">Restaurar desde una copia</h3>
+        <p class="hint" style="font-size:1rem">Sube un archivo JSON descargado antes. Solo se agregan los registros que no existen: no se modifica ni se borra nada.</p>
+        <div class="f" style="margin-top:.6rem"><input id="rsF" type="file" accept=".json,application/json"></div>
+        <button class="btn" id="rsBtn" type="button">Restaurar copia</button>
+        <p class="hint" id="rsInfo"></p>
+      </div>
     </section>
 
     <!-- Dashboard -->
@@ -341,29 +356,25 @@ header #out{box-shadow:0 2px 0 var(--sunD)}
           <div class="f"><label for="uN">Nombre completo</label><input id="uN"></div>
           <div class="f"><label for="uE">Correo</label><input id="uE" type="email"></div>
           <div class="f"><label for="uP">Contraseña inicial</label><input id="uP" type="text" placeholder="Mínimo 6 caracteres"></div>
-          <div class="f"><label for="uR">Rol</label><select id="uR"><option value="usuario">Usuario</option><option value="administrador">Administrador</option></select></div>
+          <div class="f"><label for="uR">Perfil</label><select id="uR"><option value="usuario">Usuario</option><option value="administrador">Administrador</option></select></div>
         </div>
         <button class="btn" id="uBtn">Crear usuario</button>
       </div>
       <div class="card"><h3>Usuarios</h3><div class="tw" id="uList"></div></div>
     </section>
 
-    <!-- Respaldo -->
-    <section id="t-bk" class="hide">
+    <!-- Perfiles -->
+    <section id="t-per" class="hide">
       <div class="card">
-        <h2 style="margin-bottom:.4rem">Descargar copia de seguridad</h2>
-        <p class="hint" style="font-size:1rem">Incluye todos los registros guardados, de todas las fechas y usuarios. Hazlo una vez al mes y guarda el archivo en SharePoint.</p>
-        <p class="hint" style="font-size:1rem">El <b>Excel</b> sirve para consultar. El <b>JSON</b> sirve para restaurar.</p>
-        <button class="btn dark" id="bkX" type="button" style="margin-top:.8rem">Descargar copia (Excel)</button>
-        <button class="btn dark" id="bkJ" type="button">Descargar copia (JSON)</button>
+        <h2 style="margin-bottom:.4rem">Perfiles y permisos</h2>
+        <p class="hint" style="font-size:1rem;margin-bottom:1rem">Define qué pestañas ve cada perfil. El Administrador siempre tiene control total. Centros, Usuarios y Perfiles son solo del Administrador.</p>
+        <div class="f"><label for="pN">Nombre del perfil</label><input id="pN" placeholder="Ej: Auditor"></div>
+        <div class="f"><label>Pestañas con acceso</label>
+          <div class="chk"><label><input type="checkbox" id="pt-reg"> Registrar</label><label><input type="checkbox" id="pt-con"> Consultar</label><label><input type="checkbox" id="pt-dash"> Dashboard</label></div></div>
+        <button class="btn" id="pBtn">Guardar perfil</button>
+        <button class="btn dark hide" id="pCan">Cancelar</button>
       </div>
-      <div class="card">
-        <h2 style="margin-bottom:.4rem">Restaurar desde una copia</h2>
-        <p class="hint" style="font-size:1rem">Sube un archivo JSON descargado antes. Solo se agregan los registros que no existen: no se modifica ni se borra nada.</p>
-        <div class="f" style="margin-top:.8rem"><input id="rsF" type="file" accept=".json,application/json"></div>
-        <button class="btn" id="rsBtn" type="button">Restaurar copia</button>
-        <p class="hint" id="rsInfo"></p>
-      </div>
+      <div class="card"><h3>Perfiles</h3><div class="tw" id="perList"></div></div>
     </section>
   </main>
 </div>
@@ -421,6 +432,57 @@ let me = null, centros = [], users = [], found = [];
 function toast(msg, err){ const t=$('#toast'); t.textContent=msg; t.className=err?'err':''; setTimeout(()=>t.classList.add('hide'),4000); }
 const sup = () => me && me.rol === 'administrador';
 
+/* ---------- Perfiles y permisos por pestaña ---------- */
+const TABS = {reg:'Registrar', con:'Consultar', dash:'Dashboard', cc:'Centros', usr:'Usuarios', per:'Perfiles'};
+const ASIG = ['reg','con','dash'];   // pestañas que el administrador puede dar a otros perfiles
+let perfiles = {}, perEdit = null;
+const defPerf = () => ({supervisor:{nombre:'Supervisor',tabs:['reg','con','dash']}, usuario:{nombre:'Usuario',tabs:['reg']}});
+const tabsDe = r => r==='administrador' ? Object.keys(TABS) : ((perfiles[r]&&perfiles[r].tabs)||[]).filter(t=>ASIG.includes(t));
+const can = t => !!me && tabsDe(me.rol).includes(t);
+const nomPerfil = r => r==='administrador' ? 'Administrador' : (perfiles[r] ? perfiles[r].nombre : r);
+async function loadPerfiles(){
+  try{
+    const d = await db.collection('config').doc('perfiles').get();
+    if(d.exists) perfiles = d.data().perfiles || {};
+    else{ perfiles = defPerf(); if(sup()) await db.collection('config').doc('perfiles').set({perfiles}); }
+  }catch(e){ perfiles = defPerf(); }
+}
+const rolOpts = sel => [['administrador','Administrador'],...Object.entries(perfiles).map(([id,p])=>[id,p.nombre])]
+  .map(([id,n])=>`<option value="${esc(id)}"${id===sel?' selected':''}>${esc(n)}</option>`).join('')
+  + (sel && sel!=='administrador' && !perfiles[sel] ? `<option value="${esc(sel)}" selected>${esc(sel)} (sin perfil)</option>` : '');
+const rolSel = u => `<select class="rsel" data-rol="${u.id}">${rolOpts(u.rol)}</select>`;
+function fillRoles(){ const v=$('#uR').value; $('#uR').innerHTML = rolOpts(v||'usuario'); }
+function renderPer(){
+  const rows = [['administrador',{nombre:'Administrador',tabs:[]},true], ...Object.entries(perfiles).map(([id,p])=>[id,p,false])];
+  $('#perList').innerHTML = `<table><tr><th>Perfil</th><th>Acceso a</th><th>Usuarios</th><th></th></tr>${rows.map(([id,p,fijo])=>
+    `<tr><td>${esc(p.nombre)}</td><td>${fijo?'Control total':(p.tabs.map(t=>TABS[t]).join(', ')||'—')}</td><td>${users.filter(u=>u.rol===id).length}</td><td>${fijo?'':`<button class="lnk ed" data-pe="${esc(id)}">Editar</button>${id==='usuario'?'':` <button class="lnk" data-pd="${esc(id)}">Eliminar</button>`}`}</td></tr>`).join('')}</table>`;
+  rs($('#perList'));
+}
+async function savePer(n,msg){
+  try{ await db.collection('config').doc('perfiles').set({perfiles:n}); perfiles=n; renderPer(); fillRoles(); toast(msg); return true; }
+  catch(err){ toast('No se pudo guardar: '+err.message, true); return false; }
+}
+function perReset(){ perEdit=null; $('#pN').value=''; ASIG.forEach(t=>$('#pt-'+t).checked=false); $('#pCan').classList.add('hide'); $('#pBtn').textContent='Guardar perfil'; }
+$('#pCan').onclick = perReset;
+$('#pBtn').onclick = async () => {
+  const nombre=$('#pN').value.trim(), tabs=ASIG.filter(t=>$('#pt-'+t).checked);
+  if(!nombre) return toast('Escribe el nombre del perfil.', true);
+  if(!tabs.length) return toast('Marca al menos una pestaña.', true);
+  const id = perEdit || nombre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'');
+  if(!id || id==='administrador' || (!perEdit && perfiles[id])) return toast('Ya existe un perfil con ese nombre.', true);
+  if(await savePer({...perfiles,[id]:{nombre,tabs}}, perEdit?'Perfil actualizado.':'Perfil creado.')) perReset();
+};
+$('#perList').onclick = async e => {
+  const pe=e.target.dataset.pe, pd=e.target.dataset.pd;
+  if(pe){ const p=perfiles[pe]; perEdit=pe; $('#pN').value=p.nombre; ASIG.forEach(t=>$('#pt-'+t).checked=p.tabs.includes(t));
+    $('#pCan').classList.remove('hide'); $('#pBtn').textContent='Guardar cambios'; $('#pN').scrollIntoView({behavior:'smooth',block:'center'}); }
+  if(pd){
+    if(users.some(u=>u.rol===pd)) return toast('Hay usuarios con este perfil. Cámbiales el perfil antes de eliminarlo.', true);
+    if(!confirm('¿Eliminar el perfil "'+perfiles[pd].nombre+'"?')) return;
+    const n={...perfiles}; delete n[pd]; savePer(n,'Perfil eliminado.');
+  }
+};
+
 /* ---------- Sesión ---------- */
 auth.onAuthStateChanged(async u => {
   if(!u){ me=null; $('#lP').value=''; $('#lP').type='password'; $('#lShow').textContent='Mostrar'; $('#app').classList.add('hide'); $('#login').classList.remove('hide'); return; }
@@ -431,24 +493,26 @@ auth.onAuthStateChanged(async u => {
     me = {uid:u.uid, ...d.data()};
   }catch(e){ toast('No se pudo cargar tu perfil: '+e.message, true); return auth.signOut(); }
   $('#login').classList.add('hide'); $('#app').classList.remove('hide');
-  $('#wN').textContent = me.nombre; $('#wR').textContent = sup() ? 'Administrador' : 'Usuario';
-  const tabs = [['reg','Registrar']];
-  if(sup()) tabs.push(['con','Consultar'],['dash','Dashboard'],['cc','Centros'],['usr','Usuarios'],['bk','Respaldo']);
+  await loadPerfiles();
+  $('#wN').textContent = me.nombre; $('#wR').textContent = nomPerfil(me.rol);
+  const tabs = Object.keys(TABS).filter(can).map(t => [t, TABS[t]]);
+  if(!tabs.length){ toast('Tu perfil no tiene pestañas asignadas. Habla con el administrador.', true); return auth.signOut(); }
   $('#nav').innerHTML = tabs.map(t=>`<button data-t="${t[0]}">${t[1]}</button>`).join('');
   $('#nav').classList.toggle('hide',tabs.length===1); document.body.classList.toggle('solo',tabs.length===1);
   $('#nav').onclick = e => e.target.dataset.t && go(e.target.dataset.t);
   $('#rF').value = today(); $('#cD').value = today().slice(0,8)+'01'; $('#cH').value = today();
-  await loadCentros(); go('reg');
-  if(sup()) loadUsers();
+  await loadCentros(); go(tabs[0][0]);
+  if(sup() || can('con') || can('dash')) loadUsers();
 });
 function rs(el){ const t=el.querySelector('table'); if(!t) return; t.classList.add('rs');
   const h=[...t.rows[0].cells].map(c=>c.textContent);
   [...t.rows].slice(1).forEach(r=>[...r.cells].forEach((c,i)=>c.dataset.label=h[i]||'')); }
 function go(t){
-  ['reg','con','dash','cc','usr','bk'].forEach(x=>$('#t-'+x).classList.toggle('hide',x!==t));
+  ['reg','con','dash','cc','usr','per'].forEach(x=>$('#t-'+x).classList.toggle('hide',x!==t));
   document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
   if(t==='reg') loadMine();
   if(t==='dash') loadDash();
+  if(t==='per') renderPer();
 }
 const lErr = m => { const e=$('#lErr'); e.textContent=m; e.classList.toggle('hide',!m); };
 $('#lBtn').onclick = async () => {
@@ -632,10 +696,10 @@ async function loadUsers(){
   const opt = '<option value="">Todos</option>' + users.map(u=>`<option value="${u.id}">${esc(u.nombre)}${u.activo===false?' (inactivo)':''}</option>`).join('');
   $('#cU').innerHTML = opt;
   const dv = $('#dU').value; $('#dU').innerHTML = opt; $('#dU').value = dv;
-  $('#uList').innerHTML = `<table><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Estado</th><th></th></tr>${users.map(u=>{
+  $('#uList').innerHTML = `<table><tr><th>Nombre</th><th>Correo</th><th>Perfil</th><th>Estado</th><th></th></tr>${users.map(u=>{
     const off = u.activo===false;
-    return `<tr><td>${esc(u.nombre)}</td><td>${esc(u.email)}</td><td>${esc(u.rol)}</td><td><span class="tag${off?' off':''}">${off?'Inactivo':'Activo'}</span></td><td>${u.id===me.uid?'':`<button class="lnk${off?' ed':''}" data-tog="${u.id}" data-to="${off?'1':'0'}">${off?'Activar':'Desactivar'}</button>`}</td></tr>`;
-  }).join('')}</table>`; rs($('#uList'));
+    return `<tr><td>${esc(u.nombre)}</td><td>${esc(u.email)}</td><td>${u.id===me.uid?esc(nomPerfil(u.rol)):rolSel(u)}</td><td><span class="tag${off?' off':''}">${off?'Inactivo':'Activo'}</span></td><td>${u.id===me.uid?'':`<button class="lnk${off?' ed':''}" data-tog="${u.id}" data-to="${off?'1':'0'}">${off?'Activar':'Desactivar'}</button>`}</td></tr>`;
+  }).join('')}</table>`; rs($('#uList')); renderPer(); fillRoles();
 }
 $('#cBtn').onclick = async () => {
   const d=$('#cD').value, h=$('#cH').value; if(!d||!h) return toast('Indica el rango de fechas.', true);
@@ -645,8 +709,8 @@ $('#cBtn').onclick = async () => {
     .sort((a,b)=>b.fecha.localeCompare(a.fecha)||a.nombre.localeCompare(b.nombre));
   $('#nR').textContent = found.length;
   $('#nH').textContent = (found.reduce((t,r)=>t+r.minutos,0)/60).toFixed(2);
-  $('#res').innerHTML = found.length ? `<table><tr><th>Fecha</th><th>Usuario</th><th>Centro de costos</th><th>Tiempo</th><th>Horas</th><th>Observaciones</th><th></th></tr>`+
-    found.map(r=>`<tr><td>${r.fecha}</td><td>${esc(r.nombre)}</td><td>${esc(r.centro)}</td><td>${fmtT(r)}</td><td>${(r.minutos/60).toFixed(2)}</td><td class="obs">${esc(r.obs)}</td><td><button class="lnk ed" data-aedit="${r.id}">Editar</button> <button class="lnk" data-adel="${r.id}">Eliminar</button></td></tr>`).join('')+'</table>'
+  $('#res').innerHTML = found.length ? `<table><tr><th>Fecha</th><th>Usuario</th><th>Centro de costos</th><th>Tiempo</th><th>Horas</th><th>Observaciones</th>${sup()?'<th></th>':''}</tr>`+
+    found.map(r=>`<tr><td>${r.fecha}</td><td>${esc(r.nombre)}</td><td>${esc(r.centro)}</td><td>${fmtT(r)}</td><td>${(r.minutos/60).toFixed(2)}</td><td class="obs">${esc(r.obs)}</td>${sup()?`<td><button class="lnk ed" data-aedit="${r.id}">Editar</button> <button class="lnk" data-adel="${r.id}">Eliminar</button></td>`:''}</tr>`).join('')+'</table>'
     : '<div class="empty">No hay registros con esos filtros. Prueba ampliando las fechas.</div>';
   rs($('#res'));
 };
@@ -818,6 +882,11 @@ async function loadMissing(){
 }
 $('#mDias').onchange = loadMissing;
 $('#dBtn').onclick = loadDash;
+$('#uList').onchange = async e => {
+  const id=e.target.dataset.rol; if(!id) return; const u=users.find(x=>x.id===id), rol=e.target.value;
+  try{ await db.collection('users').doc(id).update({rol}); u.rol=rol; toast('Perfil de '+u.nombre+' actualizado.'); renderPer(); }
+  catch(err){ toast('No se pudo cambiar: '+err.message, true); e.target.value=u.rol; }
+};
 $('#uList').onclick = async e => {
   const id = e.target.dataset.tog; if(!id) return;
   const activar = e.target.dataset.to==='1', u = users.find(x=>x.id===id); if(!u) return;
