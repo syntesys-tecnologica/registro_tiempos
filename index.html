@@ -202,6 +202,22 @@ header #out{box-shadow:0 2px 0 var(--sunD)}
 .chk label{display:flex;align-items:center;gap:.6rem;font-weight:500;margin:.35rem 0;cursor:pointer}
 .chk input{width:22px;height:22px;min-height:22px;flex:none;accent-color:var(--ink)}
 .rsel{width:auto;min-height:38px;padding:.3rem .5rem}
+/* ===== Login en computador: panel derecho en blanco ===== */
+@media(min-width:761px){
+  .l-right{background:#fff}
+}
+/* ===== Jornada diaria (8 h) ===== */
+.dayb{border-radius:10px;padding:.8rem 1rem;margin-bottom:1rem;border-left:6px solid var(--ok);background:#e6f4ec;color:#14532d;font-size:.98rem}
+.dayb.warn{border-left-color:var(--err);background:#fdecea;color:#8c211b}
+.dayb b{font-weight:700}
+.dayb .bar{height:8px;border-radius:999px;background:rgba(0,0,0,.12);margin-top:.5rem;overflow:hidden}
+.dayb .bar i{display:block;height:100%;background:var(--ok);border-radius:999px}
+.dayb.warn .bar i{background:var(--err)}
+.dayb p{margin:.3rem 0 0}
+tr.big td{background:#fff3a3}
+tr.big td:first-child{box-shadow:inset 5px 0 0 var(--ink)}
+.flag{display:inline-block;margin-left:.4rem;padding:.05rem .5rem;border-radius:999px;background:var(--ink);color:var(--sun);font-size:.75rem;font-weight:700;white-space:nowrap}
+.lock{color:var(--mut);font-size:.85rem}
 </style>
 </head>
 <body>
@@ -244,6 +260,7 @@ header #out{box-shadow:0 2px 0 var(--sunD)}
       <div class="card">
         <h2 style="margin-bottom:1rem">Registrar tiempo</h2>
         <p class="hint hide" id="rInfo" style="margin:-.4rem 0 1rem;font-size:1rem"></p>
+        <div id="dayB" class="dayb hide" role="status" aria-live="polite"></div>
         <div class="grid">
           <div class="f"><label for="rF">Fecha</label><input id="rF" type="date"></div>
           <div class="f"><label for="rC">Centro de costos</label>
@@ -382,6 +399,19 @@ header #out{box-shadow:0 2px 0 var(--sunD)}
       </div>
       <div class="card"><h3>Perfiles</h3><div class="tw" id="perList"></div></div>
     </section>
+    <!-- Festivos -->
+    <section id="t-fes" class="hide">
+      <div class="card">
+        <h2 style="margin-bottom:.4rem">Festivos</h2>
+        <p class="hint" style="font-size:1rem;margin-bottom:1rem">Registra los días festivos entre semana. En estas fechas el sistema no exige las 8 horas mínimas ni muestra la alerta de jornada incompleta.</p>
+        <div class="grid">
+          <div class="f"><label for="fF">Fecha</label><input id="fF" type="date"></div>
+          <div class="f"><label for="fN">Nombre del festivo (opcional)</label><input id="fN" placeholder="Ej: Día de la Raza" autocomplete="off"></div>
+        </div>
+        <button class="btn" id="fBtn" type="button">Agregar festivo</button>
+      </div>
+      <div class="card"><h3>Festivos registrados</h3><p class="hint" id="fInfo"></p><div class="tw" id="fList"></div></div>
+    </section>
   </main>
 </div>
 <div id="cfm" class="hide" role="dialog" aria-modal="true" aria-labelledby="cfmT">
@@ -438,8 +468,63 @@ let me = null, centros = [], users = [], found = [];
 function toast(msg, err){ const t=$('#toast'); t.textContent=msg; t.className=err?'err':''; setTimeout(()=>t.classList.add('hide'),4000); }
 const sup = () => me && me.rol === 'administrador';
 
+/* ---------- Jornada mínima y ventana de edición ---------- */
+const MIN_DIA = 480;                                   // mínimo diario: 8 horas (en minutos)
+const hh = m => (m/60).toFixed(2).replace(/\.?0+$/,'');
+let festivos = [];                                      // [{fecha:'AAAA-MM-DD', nombre}]
+const esFest = s => festivos.some(x => x.fecha === s);
+const esLab = s => { const [y,m,d] = s.split('-').map(Number); const w = new Date(y,m-1,d).getDay(); return w!==0 && w!==6 && !esFest(s); };
+async function loadFestivos(){
+  try{ const d = await db.collection('config').doc('festivos').get(); festivos = d.exists ? (d.data().lista||[]) : []; }
+  catch(e){ festivos = []; }
+}
+const diaSem = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y,m-1,d).toLocaleDateString('es-CO',{weekday:'long'}); };
+function renderFes(){
+  const l = [...festivos].sort((a,b)=>a.fecha.localeCompare(b.fecha));
+  $('#fInfo').textContent = l.length ? `${l.length} festivo${l.length===1?'':'s'} registrado${l.length===1?'':'s'}.` : 'Aún no hay festivos registrados.';
+  $('#fList').innerHTML = l.length ? `<table><tr><th>Fecha</th><th>Día</th><th>Festivo</th><th></th></tr>${l.map(x=>
+    `<tr><td>${esc(x.fecha)}</td><td>${esc(diaSem(x.fecha))}</td><td>${esc(x.nombre||'—')}</td><td><button class="lnk" data-fdel="${esc(x.fecha)}">Eliminar</button></td></tr>`).join('')}</table>` : '';
+  rs($('#fList'));
+}
+async function saveFes(n, msg){
+  try{ await db.collection('config').doc('festivos').set({lista:n, actualizado:Date.now(), por:me.nombre}); festivos = n; renderFes(); renderDay(); toast(msg); return true; }
+  catch(err){ toast('No se pudo guardar: '+err.message, true); return false; }
+}
+const dayMin = f => mineList.filter(r => r.fecha === f).reduce((t,r) => t + r.minutos, 0);
+const grande = r => r.minutos > MIN_DIA;               // un solo registro con más de 8 h
+const flagG = r => grande(r) ? '<span class="flag">+8 h</span>' : '';
+/* Solo el administrador puede tocar registros antiguos; los demás perfiles, únicamente hoy y ayer */
+const puedeEditar = r => sup() || r.fecha >= addDays(today(), -1);
+const MSG_VENTANA = 'Solo puedes editar o eliminar registros del día de hoy y del día anterior.';
+function renderDay(){
+  const b = $('#dayB'); if(!b || !me) return;
+  const f = $('#rF').value || today(), tot = dayMin(f), lab = esLab(f);
+  const ayer = addDays(today(), -1);
+  let html = '', warn = false;
+  if(lab){
+    warn = tot < MIN_DIA;
+    const pct = Math.min(100, Math.round(tot/MIN_DIA*100));
+    html = warn
+      ? `<b>Jornada incompleta (${esc(f)}):</b> llevas ${hh(tot)} h de 8 h. Te faltan <b>${hh(MIN_DIA-tot)} h</b> para el mínimo diario.`
+      : `<b>Jornada completa (${esc(f)}):</b> ${hh(tot)} h registradas. ¡Cumples el mínimo de 8 h!`;
+    html += `<div class="bar"><i style="width:${pct}%"></i></div>`;
+  }else if(tot>0){
+    html = `<b>${esc(f)}</b> es un día no laborable (fin de semana o festivo): ${hh(tot)} h registradas (no se exige el mínimo de 8 h).`;
+  }
+  if(f!==ayer && esLab(ayer) && dayMin(ayer) < MIN_DIA){
+    warn = true;
+    html += `<p><b>Pendiente:</b> ayer (${esc(ayer)}) solo registraste ${hh(dayMin(ayer))} h. Aún puedes completarlo hoy: cambia la fecha del formulario a ayer.</p>`;
+  }
+  b.innerHTML = html; b.classList.toggle('warn', warn); b.classList.toggle('hide', !html);
+}
+function avisoDia(f){
+  if(!esLab(f)) return;
+  const t = dayMin(f);
+  if(t < MIN_DIA) toast(`Registro guardado. Alerta: el ${f} llevas ${hh(t)} h y te faltan ${hh(MIN_DIA-t)} h para completar las 8 h mínimas.`, true);
+}
+
 /* ---------- Perfiles y permisos por pestaña ---------- */
-const TABS = {reg:'Registrar', con:'Consultar', dash:'Dashboard', bak:'Copia de seguridad', cc:'Centros', usr:'Usuarios', per:'Perfiles'};
+const TABS = {reg:'Registrar', con:'Consultar', dash:'Dashboard', bak:'Copia de seguridad', cc:'Centros', usr:'Usuarios', per:'Perfiles', fes:'Festivos'};
 const ASIG = ['reg','con','dash','bak'];   // pestañas que el administrador puede dar a otros perfiles
 let perfiles = {}, perEdit = null;
 const defPerf = () => ({supervisor:{nombre:'Supervisor',tabs:['reg','con','dash']}, usuario:{nombre:'Usuario',tabs:['reg']}});
@@ -500,7 +585,7 @@ auth.onAuthStateChanged(async u => {
     me = {uid:u.uid, ...d.data()};
   }catch(e){ toast('No se pudo cargar tu perfil: '+e.message, true); return auth.signOut(); }
   $('#login').classList.add('hide'); $('#app').classList.remove('hide');
-  await loadPerfiles();
+  await loadPerfiles(); await loadFestivos();
   $('#wN').textContent = me.nombre; $('#wR').textContent = nomPerfil(me.rol);
   const tabs = Object.keys(TABS).filter(can).map(t => [t, TABS[t]]);
   if(!tabs.length){ toast('Tu perfil no tiene pestañas asignadas. Habla con el administrador.', true); return auth.signOut(); }
@@ -515,11 +600,12 @@ function rs(el){ const t=el.querySelector('table'); if(!t) return; t.classList.a
   const h=[...t.rows[0].cells].map(c=>c.textContent);
   [...t.rows].slice(1).forEach(r=>[...r.cells].forEach((c,i)=>c.dataset.label=h[i]||'')); }
 function go(t){
-  ['reg','con','dash','bak','cc','usr','per'].forEach(x=>$('#t-'+x).classList.toggle('hide',x!==t));
+  ['reg','con','dash','bak','cc','usr','per','fes'].forEach(x=>$('#t-'+x).classList.toggle('hide',x!==t));
   document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
   if(t==='reg') loadMine();
   if(t==='dash') loadDash();
   if(t==='per') renderPer();
+  if(t==='fes') renderFes();
   if(t==='bak') $('#rsBox').classList.toggle('hide', !sup());
 }
 const lErr = m => { const e=$('#lErr'); e.textContent=m; e.classList.toggle('hide',!m); };
@@ -633,6 +719,7 @@ $('#rBtn').onclick = async () => {
   if(!(r.cantidad > 0)) return toast('Escribe una cantidad mayor a cero.', true);
   if(!r.obs) return toast('Cuéntanos qué hiciste en las observaciones.', true);
   r.minutos = toMin(r);
+  if(editId && !sup() && r.fecha < addDays(today(), -1)) return toast(MSG_VENTANA, true);
   try{
     if(editId){
       await db.collection('registros').doc(editId).update({...r, editado:Date.now()});
@@ -643,13 +730,16 @@ $('#rBtn').onclick = async () => {
       await db.collection('registros').add({...r, uid:me.uid, nombre:me.nombre, creado:Date.now()});
       $('#rQ').value=''; $('#rO').value=''; $('#rC').value=''; toast('Registro guardado.');
     }
-    loadMine();
+    await loadMine();
+    if(r.minutos > MIN_DIA) toast(`Registro guardado. Nota: este registro supera las 8 h (${hh(r.minutos)} h) y queda resaltado.`, true);
+    else avisoDia(r.fecha);
   }catch(e){ toast('No se pudo guardar: '+e.message, true); }
 };
 /* ---------- Editar un registro ya guardado ---------- */
 let editId = null, editFrom = '', mineList = [];
 function startEdit(id){
   const r = mineList.find(x=>x.id===id) || found.find(x=>x.id===id); if(!r) return;
+  if(!puedeEditar(r)) return toast(MSG_VENTANA, true);
   editFrom = $('#t-con').classList.contains('hide') ? 'reg' : 'con';
   if(editFrom==='con') go('reg');
   editId = id;
@@ -667,6 +757,7 @@ function endEdit(){
   $('#rQ').value=''; $('#rO').value=''; $('#rC').value=''; $('#rF').value = today(); $('#rU').value = 'horas';
   $('#rBtn').textContent = 'Guardar registro'; $('#rCan').classList.add('hide');
   $('#t-reg .card').classList.remove('editing');
+  renderDay();
 }
 $('#rCan').onclick = () => { const back = editFrom==='con'; endEdit(); toast('Edición cancelada.'); if(back) go('con'); };
 const fmtT = r => `${r.cantidad} ${r.unidad === 'horas' ? 'h' : 'min'}`;
@@ -674,14 +765,15 @@ let mineShown = 30;
 async function loadMine(){
   const s = await db.collection('registros').where('uid','==',me.uid).get();
   mineList = s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>b.fecha.localeCompare(a.fecha)||b.creado-a.creado);
-  renderMine();
+  renderMine(); renderDay();
 }
+$('#rF').addEventListener('change', renderDay);
 function renderMine(){
   const q = norm($('#mQ').value).split(/\s+/).filter(Boolean), d = $('#mD').value, h = $('#mH').value;
   const f = mineList.filter(r => (!d||r.fecha>=d) && (!h||r.fecha<=h) && q.every(w => norm(r.centro+' '+r.obs).includes(w)));
   const l = f.slice(0, mineShown);
   $('#mine').innerHTML = l.length ? `<table><tr><th>Fecha</th><th>Centro de costos</th><th>Tiempo</th><th>Observaciones</th><th></th></tr>`+
-    l.map(r=>`<tr><td>${r.fecha}</td><td>${esc(r.centro)}</td><td>${fmtT(r)}</td><td class="obs">${esc(r.obs)}</td><td><button class="lnk ed" data-edit="${r.id}">Editar</button> <button class="lnk" data-del="${r.id}">Eliminar</button></td></tr>`).join('')+'</table>'
+    l.map(r=>`<tr${grande(r)?' class="big"':''}><td>${r.fecha}</td><td>${esc(r.centro)}</td><td>${fmtT(r)}${flagG(r)}</td><td class="obs">${esc(r.obs)}</td><td>${puedeEditar(r)?`<button class="lnk ed" data-edit="${r.id}">Editar</button> <button class="lnk" data-del="${r.id}">Eliminar</button>`:'<span class="lock" title="Solo se editan registros de hoy y ayer">Bloqueado</span>'}</td></tr>`).join('')+'</table>'
     : (mineList.length ? '<div class="empty">Ningún registro coincide con los filtros.</div>' : '<div class="empty">Aún no tienes registros. Completa el formulario de arriba.</div>');
   rs($('#mine'));
   $('#mInfo').textContent = mineList.length ? `Mostrando ${l.length} de ${f.length} registros` + (f.length!==mineList.length ? ` (filtrados de ${mineList.length})` : '') : '';
@@ -692,7 +784,9 @@ $('#mClr').onclick = () => { $('#mQ').value=''; $('#mD').value=''; $('#mH').valu
 $('#mMore').onclick = () => { mineShown += 30; renderMine(); };
 $('#mine').onclick = async e => {
   if(e.target.dataset.edit) return startEdit(e.target.dataset.edit);
-  const id = e.target.dataset.del; if(!id || !confirm('¿Eliminar este registro?')) return;
+  const id = e.target.dataset.del; if(!id) return;
+  const rd = mineList.find(x=>x.id===id); if(rd && !puedeEditar(rd)) return toast(MSG_VENTANA, true);
+  if(!confirm('¿Eliminar este registro?')) return;
   if(id===editId) endEdit();
   await db.collection('registros').doc(id).delete(); toast('Registro eliminado.'); loadMine();
 };
@@ -718,7 +812,7 @@ $('#cBtn').onclick = async () => {
   $('#nR').textContent = found.length;
   $('#nH').textContent = (found.reduce((t,r)=>t+r.minutos,0)/60).toFixed(2);
   $('#res').innerHTML = found.length ? `<table><tr><th>Fecha</th><th>Usuario</th><th>Centro de costos</th><th>Tiempo</th><th>Horas</th><th>Observaciones</th>${sup()?'<th></th>':''}</tr>`+
-    found.map(r=>`<tr><td>${r.fecha}</td><td>${esc(r.nombre)}</td><td>${esc(r.centro)}</td><td>${fmtT(r)}</td><td>${(r.minutos/60).toFixed(2)}</td><td class="obs">${esc(r.obs)}</td>${sup()?`<td><button class="lnk ed" data-aedit="${r.id}">Editar</button> <button class="lnk" data-adel="${r.id}">Eliminar</button></td>`:''}</tr>`).join('')+'</table>'
+    found.map(r=>`<tr${grande(r)?' class="big"':''}><td>${r.fecha}</td><td>${esc(r.nombre)}</td><td>${esc(r.centro)}</td><td>${fmtT(r)}${flagG(r)}</td><td>${(r.minutos/60).toFixed(2)}</td><td class="obs">${esc(r.obs)}</td>${sup()?`<td><button class="lnk ed" data-aedit="${r.id}">Editar</button> <button class="lnk" data-adel="${r.id}">Eliminar</button></td>`:''}</tr>`).join('')+'</table>'
     : '<div class="empty">No hay registros con esos filtros. Prueba ampliando las fechas.</div>';
   rs($('#res'));
 };
@@ -904,6 +998,22 @@ $('#uList').onclick = async e => {
   catch(err){ toast('No se pudo actualizar: '+err.message, true); }
 };
 $('#dClr').onclick = () => { $('#dU').value=''; $('#dC').value=''; loadDash(); };
+
+/* ---------- Festivos (solo administrador) ---------- */
+$('#fBtn').onclick = async () => {
+  if(!sup()) return toast('Solo el administrador puede gestionar festivos.', true);
+  const fecha = $('#fF').value, nombre = $('#fN').value.trim().slice(0,80);
+  if(!fecha) return toast('Selecciona la fecha del festivo.', true);
+  const [y,m,d] = fecha.split('-').map(Number), w = new Date(y,m-1,d).getDay();
+  if(w===0||w===6) return toast('Esa fecha cae en fin de semana; solo registra festivos entre semana.', true);
+  if(esFest(fecha)) return toast('Esa fecha ya está registrada como festivo.', true);
+  if(await saveFes([...festivos,{fecha,nombre}], 'Festivo agregado.')){ $('#fF').value=''; $('#fN').value=''; }
+};
+$('#fList').onclick = async e => {
+  const f = e.target.dataset.fdel; if(!f || !sup()) return;
+  if(!confirm('¿Eliminar el festivo del '+f+'? Ese día volverá a exigir las 8 horas.')) return;
+  saveFes(festivos.filter(x=>x.fecha!==f), 'Festivo eliminado.');
+};
 
 /* ---------- Crear usuarios ---------- */
 $('#uBtn').onclick = async () => {
