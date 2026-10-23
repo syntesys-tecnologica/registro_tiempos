@@ -282,6 +282,12 @@ header #out{box-shadow:0 2px 0 var(--sunD)}
         <p class="hint" style="font-size:1rem">Descarga todos los registros guardados, de todas las fechas y usuarios. Hazlo una vez al mes y guarda el archivo en SharePoint.</p>
         <button class="btn dark" id="bkX" type="button" style="margin-top:.6rem">Descargar copia (Excel)</button>
         <button class="btn dark" id="bkJ" type="button">Descargar copia (JSON)</button>
+        <hr style="border:0;border-top:1px solid var(--line);margin:1.2rem 0">
+        <h3 style="font-size:1.15rem">Restaurar desde una copia</h3>
+        <p class="hint" style="font-size:1rem">Sube un archivo JSON descargado antes. Solo se agregan los registros que no existen: no se modifica ni se borra nada.</p>
+        <div class="f" style="margin-top:.6rem"><input id="rsF" type="file" accept=".json,application/json"></div>
+        <button class="btn" id="rsBtn" type="button">Restaurar copia</button>
+        <p class="hint" id="rsInfo"></p>
       </div>
     </section>
 
@@ -696,10 +702,52 @@ $('#bkX').onclick = async () => {
 };
 $('#bkJ').onclick = async () => {
   const rows = await backupData($('#bkJ')); if(!rows) return;
-  const blob = new Blob([JSON.stringify({generado:new Date().toISOString(), registros:rows, usuarios:users}, null, 2)], {type:'application/json'});
+  const blob = new Blob([JSON.stringify({generado:new Date().toISOString(), registros:rows, usuarios:users, centros}, null, 2)], {type:'application/json'});
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `Respaldo_registros_${today()}.json`;
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
   toast(`Copia descargada: ${rows.length} registros.`);
+};
+
+/* ---------- Restaurar copia (JSON) ---------- */
+$('#rsBtn').onclick = async () => {
+  const info = m => { $('#rsInfo').textContent = m; };
+  const f = $('#rsF').files[0]; if(!f) return toast('Selecciona el archivo JSON de la copia.', true);
+  let data;
+  try{ data = JSON.parse(await f.text()); }catch(e){ return toast('El archivo no es un JSON válido.', true); }
+  if(!data || !Array.isArray(data.registros)) return toast('El archivo no parece una copia de esta app (falta "registros").', true);
+  const ok = r => r && typeof r.id==='string' && r.id && typeof r.uid==='string' && typeof r.nombre==='string'
+    && typeof r.fecha==='string' && r.fecha.length===10 && typeof r.centro==='string' && r.centro.length<=200
+    && typeof r.cantidad==='number' && r.cantidad>0 && ['horas','minutos'].includes(r.unidad)
+    && typeof r.minutos==='number' && r.minutos>0 && r.minutos<=1440
+    && typeof r.obs==='string' && r.obs.length<=2000 && typeof r.creado==='number';
+  const validos = data.registros.filter(ok), invalidos = data.registros.length - validos.length;
+  const perfiles = (Array.isArray(data.usuarios) ? data.usuarios : []).filter(u => u && typeof u.id==='string' && u.id && typeof u.nombre==='string');
+  if(!confirm(`La copia tiene ${validos.length} registros${invalidos ? ` (${invalidos} inválidos se omitirán)` : ''} y ${perfiles.length} perfiles de usuario.\n\nSe agregarán solo los que no existan. ¿Continuar?`)) return;
+  const b = $('#rsBtn'); b.disabled = true;
+  try{
+    info('Leyendo los datos actuales…');
+    const [sr, su] = await Promise.all([db.collection('registros').get(), db.collection('users').get()]);
+    const hayR = new Set(sr.docs.map(d=>d.id)), hayU = new Set(su.docs.map(d=>d.id));
+    const nuevosR = validos.filter(r => !hayR.has(r.id)), nuevosU = perfiles.filter(u => !hayU.has(u.id));
+    const tareas = [];
+    if(Array.isArray(data.centros) && data.centros.length && !centros.length){
+      const lista = [...new Set(data.centros.map(c=>String(c).trim()).filter(Boolean))];
+      tareas.push(() => db.collection('config').doc('centros').set({lista, actualizado:Date.now(), por:me.nombre}));
+    }
+    nuevosU.forEach(u => tareas.push(() => db.collection('users').doc(u.id).set({nombre:u.nombre, email:u.email||'', rol:typeof u.rol==='string'?u.rol:'usuario', activo:u.activo!==false})));
+    nuevosR.forEach(r => tareas.push(() => {
+      const d = {uid:r.uid, nombre:r.nombre, fecha:r.fecha, centro:r.centro, cantidad:r.cantidad, unidad:r.unidad, minutos:r.minutos, obs:r.obs, creado:r.creado};
+      if(typeof r.editado==='number') d.editado = r.editado;
+      return db.collection('registros').doc(r.id).set(d);
+    }));
+    for(let i=0; i<tareas.length; i+=20){
+      await Promise.all(tareas.slice(i, i+20).map(t => t()));
+      info(`Restaurando… ${Math.min(i+20, tareas.length)} de ${tareas.length}`);
+    }
+    info(`Listo: ${nuevosR.length} registros y ${nuevosU.length} perfiles agregados. ${validos.length-nuevosR.length} registros ya existían.`);
+    toast('Copia restaurada.'); loadCentros(); loadUsers();
+  }catch(e){ info(''); toast('No se pudo restaurar: '+e.message, true); }
+  b.disabled = false;
 };
 
 /* ---------- Dashboard ---------- */
