@@ -208,6 +208,7 @@ header #out{box-shadow:0 2px 0 var(--sunD)}
 }
 /* ===== Jornada diaria (8 h) ===== */
 .dayb{border-radius:10px;padding:.8rem 1rem;margin-bottom:1rem;border-left:6px solid var(--ok);background:#e6f4ec;color:#14532d;font-size:.98rem}
+.dayb.info{border-left-color:var(--sunD);background:#fff8b3;color:var(--ink)}
 .dayb.warn{border-left-color:var(--err);background:#fdecea;color:#8c211b}
 .dayb b{font-weight:700}
 .dayb .bar{height:8px;border-radius:999px;background:rgba(0,0,0,.12);margin-top:.5rem;overflow:hidden}
@@ -496,6 +497,8 @@ const flagG = r => grande(r) ? '<span class="flag">+8 h</span>' : '';
 /* Solo el administrador puede tocar registros antiguos; los demás perfiles, únicamente hoy y ayer */
 const puedeEditar = r => sup() || r.fecha >= addDays(today(), -1);
 const MSG_VENTANA = 'Solo puedes editar o eliminar registros del día de hoy y del día anterior.';
+const MSG_FECHA = 'Solo puedes registrar tiempo del día de hoy y del día anterior.';
+const fechaOk = f => sup() || (f >= addDays(today(), -1) && f <= today());
 function renderDay(){
   const b = $('#dayB'); if(!b || !me) return;
   const f = $('#rF').value || today(), tot = dayMin(f), lab = esLab(f);
@@ -508,14 +511,15 @@ function renderDay(){
       ? `<b>Jornada incompleta (${esc(f)}):</b> llevas ${hh(tot)} h de 8 h. Te faltan <b>${hh(MIN_DIA-tot)} h</b> para el mínimo diario.`
       : `<b>Jornada completa (${esc(f)}):</b> ${hh(tot)} h registradas. ¡Cumples el mínimo de 8 h!`;
     html += `<div class="bar"><i style="width:${pct}%"></i></div>`;
-  }else if(tot>0){
-    html = `<b>${esc(f)}</b> es un día no laborable (fin de semana o festivo): ${hh(tot)} h registradas (no se exige el mínimo de 8 h).`;
+  }else{
+    const fe = festivos.find(x => x.fecha === f);
+    html = fe ? `<b>Día festivo</b>${fe.nombre ? ' · '+esc(fe.nombre) : ''}` : '<b>Fin de semana</b>';
   }
   if(f!==ayer && esLab(ayer) && dayMin(ayer) < MIN_DIA){
     warn = true;
     html += `<p><b>Pendiente:</b> ayer (${esc(ayer)}) solo registraste ${hh(dayMin(ayer))} h. Aún puedes completarlo hoy: cambia la fecha del formulario a ayer.</p>`;
   }
-  b.innerHTML = html; b.classList.toggle('warn', warn); b.classList.toggle('hide', !html);
+  b.innerHTML = html; b.classList.toggle('info', !lab && !warn); b.classList.toggle('warn', warn); b.classList.toggle('hide', !html);
 }
 function avisoDia(f){
   if(!esLab(f)) return;
@@ -592,7 +596,8 @@ auth.onAuthStateChanged(async u => {
   $('#nav').innerHTML = tabs.map(t=>`<button data-t="${t[0]}">${t[1]}</button>`).join('');
   $('#nav').classList.toggle('hide',tabs.length===1); document.body.classList.toggle('solo',tabs.length===1);
   $('#nav').onclick = e => e.target.dataset.t && go(e.target.dataset.t);
-  $('#rF').value = today(); $('#cD').value = today().slice(0,8)+'01'; $('#cH').value = today();
+  $('#rF').value = today(); $('#rF').min = sup() ? '' : addDays(today(),-1); $('#rF').max = sup() ? '' : today();
+  $('#cD').value = today().slice(0,8)+'01'; $('#cH').value = today();
   await loadCentros(); go(tabs[0][0]);
   if(sup() || can('con') || can('dash') || can('bak')) loadUsers();
 });
@@ -719,7 +724,7 @@ $('#rBtn').onclick = async () => {
   if(!(r.cantidad > 0)) return toast('Escribe una cantidad mayor a cero.', true);
   if(!r.obs) return toast('Cuéntanos qué hiciste en las observaciones.', true);
   r.minutos = toMin(r);
-  if(editId && !sup() && r.fecha < addDays(today(), -1)) return toast(MSG_VENTANA, true);
+  if(!fechaOk(r.fecha)) return toast(MSG_FECHA, true);
   try{
     if(editId){
       await db.collection('registros').doc(editId).update({...r, editado:Date.now()});
