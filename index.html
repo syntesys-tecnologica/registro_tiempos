@@ -191,6 +191,14 @@ header #out{box-shadow:0 2px 0 var(--sunD)}
 #pwm .btn.cancel{background:#fff;color:var(--ink);border:2px solid var(--line);box-shadow:none}
 #pwm .f{text-align:left;margin-bottom:.8rem}
 #pwm .l-err{text-align:left}
+/* Encabezado en celular: una sola fila, botones compactos */
+@media(max-width:760px){
+  header{gap:.5rem}
+  header .sp{display:none}
+  header .who{flex:1 1 auto;min-width:0;font-size:.8rem}
+  header #wN{display:inline-block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom}
+  header #out,header #pwBtn{min-height:30px;padding:.2rem .55rem;font-size:.8rem}
+}
 </style>
 </head>
 <body>
@@ -223,7 +231,7 @@ header #out{box-shadow:0 2px 0 var(--sunD)}
   <header>
     <img src="logo.gif" alt=""><span class="brand">SYNTESYS</span><span class="sp"></span>
     <div class="who"><span id="wN"></span><br><small id="wR"></small></div>
-    <button class="btn sm" id="pwBtn" type="button" title="Cambiar contraseña">Clave</button>
+    <button class="btn sm" id="pwBtn" type="button" title="Cambio de contraseña">Cambio de contraseña</button>
     <button class="btn sm" id="out">Salir</button>
   </header>
   <nav id="nav"></nav>
@@ -365,7 +373,7 @@ header #out{box-shadow:0 2px 0 var(--sunD)}
 </div>
 <div id="pwm" class="hide" role="dialog" aria-modal="true" aria-labelledby="pwT">
   <div class="box">
-    <h3 id="pwT">Cambiar contraseña</h3>
+    <h3 id="pwT">Cambio de contraseña</h3>
     <p>Escribe tu contraseña actual y la nueva.</p>
     <div id="pwErr" class="l-err hide" role="alert"></div>
     <div class="f"><label for="pwO">Contraseña actual</label><input id="pwO" type="password" autocomplete="current-password"></div>
