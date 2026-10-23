@@ -83,6 +83,8 @@ textarea{min-height:92px;resize:vertical}
 .btn.sm{font-size:1rem;padding:.45rem .9rem}
 .btn.full{width:100%}
 .lnk{background:none;border:0;color:var(--err);cursor:pointer;font-weight:600}
+.lnk.ed{color:var(--ink);text-decoration:underline;text-underline-offset:3px}
+.editing{border-color:var(--sun)!important;box-shadow:0 0 0 3px var(--sun)}
 .hint{color:var(--mut);font-size:.88rem;margin:.3rem 0 0}
 /* table */
 .tw{overflow-x:auto}
@@ -116,7 +118,7 @@ td[data-label=""]::before{display:none}
   .card{padding:1rem}
   h2{font-size:1.6rem}
   .btn{width:100%}
-  #xBtn,#dClr{margin-top:.6rem}
+  #xBtn,#dClr,#rCan{margin-top:.6rem}
   .tot b{font-size:1.8rem}
   #toast{bottom:calc(5.5rem + env(safe-area-inset-bottom))}
   body.solo #toast{bottom:1.2rem}
@@ -221,6 +223,7 @@ header #out{width:auto;min-height:34px;padding:.25rem .7rem;font-size:.9rem;bord
         </div>
         <div class="f"><label for="rO">Actividad Realizada</label><textarea id="rO" placeholder="¿Qué hiciste en este centro de costos?"></textarea></div>
         <button class="btn" id="rBtn">Guardar registro</button>
+        <button class="btn dark hide" id="rCan">Cancelar edición</button>
       </div>
       <div class="card">
         <h3>Mis últimos registros</h3>
@@ -458,21 +461,47 @@ $('#rBtn').onclick = async () => {
   if(!r.obs) return toast('Cuéntanos qué hiciste en las observaciones.', true);
   r.minutos = toMin(r);
   try{
-    await db.collection('registros').add({...r, uid:me.uid, nombre:me.nombre, creado:Date.now()});
-    $('#rQ').value=''; $('#rO').value=''; $('#rC').value=''; toast('Registro guardado.'); loadMine();
+    if(editId){
+      await db.collection('registros').doc(editId).update({...r, editado:Date.now()});
+      endEdit(); toast('Registro actualizado.');
+    }else{
+      await db.collection('registros').add({...r, uid:me.uid, nombre:me.nombre, creado:Date.now()});
+      $('#rQ').value=''; $('#rO').value=''; $('#rC').value=''; toast('Registro guardado.');
+    }
+    loadMine();
   }catch(e){ toast('No se pudo guardar: '+e.message, true); }
 };
+/* ---------- Editar un registro ya guardado ---------- */
+let editId = null, mineList = [];
+function startEdit(id){
+  const r = mineList.find(x=>x.id===id); if(!r) return;
+  editId = id;
+  $('#rF').value = r.fecha; $('#rC').value = r.centro; $('#rQ').value = r.cantidad; $('#rU').value = r.unidad; $('#rO').value = r.obs;
+  $('#rBtn').textContent = 'Guardar cambios'; $('#rCan').classList.remove('hide');
+  $('#t-reg .card').classList.add('editing');
+  $('#t-reg').scrollIntoView({behavior:'smooth', block:'start'});
+}
+function endEdit(){
+  editId = null;
+  $('#rQ').value=''; $('#rO').value=''; $('#rC').value=''; $('#rF').value = today(); $('#rU').value = 'horas';
+  $('#rBtn').textContent = 'Guardar registro'; $('#rCan').classList.add('hide');
+  $('#t-reg .card').classList.remove('editing');
+}
+$('#rCan').onclick = () => { endEdit(); toast('Edición cancelada.'); };
 const fmtT = r => `${r.cantidad} ${r.unidad === 'horas' ? 'h' : 'min'}`;
 async function loadMine(){
   const s = await db.collection('registros').where('uid','==',me.uid).get();
   const l = s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>b.fecha.localeCompare(a.fecha)||b.creado-a.creado).slice(0,30);
+  mineList = l;
   $('#mine').innerHTML = l.length ? `<table><tr><th>Fecha</th><th>Centro de costos</th><th>Tiempo</th><th>Observaciones</th><th></th></tr>`+
-    l.map(r=>`<tr><td>${r.fecha}</td><td>${esc(r.centro)}</td><td>${fmtT(r)}</td><td class="obs">${esc(r.obs)}</td><td><button class="lnk" data-del="${r.id}">Eliminar</button></td></tr>`).join('')+'</table>'
+    l.map(r=>`<tr><td>${r.fecha}</td><td>${esc(r.centro)}</td><td>${fmtT(r)}</td><td class="obs">${esc(r.obs)}</td><td><button class="lnk ed" data-edit="${r.id}">Editar</button> <button class="lnk" data-del="${r.id}">Eliminar</button></td></tr>`).join('')+'</table>'
     : '<div class="empty">Aún no tienes registros. Completa el formulario de arriba.</div>';
   rs($('#mine'));
 }
 $('#mine').onclick = async e => {
+  if(e.target.dataset.edit) return startEdit(e.target.dataset.edit);
   const id = e.target.dataset.del; if(!id || !confirm('¿Eliminar este registro?')) return;
+  if(id===editId) endEdit();
   await db.collection('registros').doc(id).delete(); toast('Registro eliminado.'); loadMine();
 };
 
