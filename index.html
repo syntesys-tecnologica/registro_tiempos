@@ -118,7 +118,7 @@ td[data-label=""]::before{display:none}
   .card{padding:1rem}
   h2{font-size:1.6rem}
   .btn{width:100%}
-  #xBtn,#dClr,#rCan{margin-top:.6rem}
+  #xBtn,#dClr,#rCan,#bkJ,#mClr{margin-top:.6rem}
   .tot b{font-size:1.8rem}
   #toast{bottom:calc(5.5rem + env(safe-area-inset-bottom))}
   body.solo #toast{bottom:1.2rem}
@@ -164,8 +164,17 @@ input[type="date"]::-webkit-calendar-picker-indicator{margin:0;padding:0}
   nav button{font-size:.95rem;padding:.75rem .1rem}
 }
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+/* Estados, chips y botones nuevos */
+.tag{display:inline-block;padding:.1rem .6rem;border-radius:999px;font-size:.8rem;font-weight:600;background:#e6f4ec;color:var(--ok)}
+.tag.off{background:#fdecea;color:#8c211b}
+.chips{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.4rem}
+.chip{background:var(--bg);border:1.5px solid var(--line);border-radius:999px;padding:.3rem .8rem;font-weight:600;font-size:.92rem}
+.chip.warn{border-color:var(--sunD);background:#fff8b3}
+.more{margin-top:.8rem}
+header #pwBtn{background:transparent;color:#fff;border:1.5px solid #6b6b70;box-shadow:none}
 /* ===== Botón Salir compacto + confirmación ===== */
-header #out{width:auto;min-height:34px;padding:.25rem .7rem;font-size:.9rem;border-radius:6px;box-shadow:0 2px 0 var(--sunD);flex:none}
+header #out,header #pwBtn{width:auto;min-height:34px;padding:.25rem .7rem;font-size:.9rem;border-radius:6px;flex:none}
+header #out{box-shadow:0 2px 0 var(--sunD)}
 #cfm{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:1rem;z-index:20}
 #cfm .box{background:#fff;border-radius:12px;border-top:6px solid var(--sun);padding:1.3rem 1.4rem;max-width:360px;width:100%;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.3)}
 #cfm h3{font-size:1.5rem;margin-bottom:.4rem}
@@ -173,6 +182,15 @@ header #out{width:auto;min-height:34px;padding:.25rem .7rem;font-size:.9rem;bord
 #cfm .acts{display:flex;gap:.6rem}
 #cfm .acts .btn{flex:1;width:auto;min-height:44px;font-size:1.1rem}
 #cfm .btn.cancel{background:#fff;color:var(--ink);border:2px solid var(--line);box-shadow:none}
+#pwm{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:1rem;z-index:20}
+#pwm .box{background:#fff;border-radius:12px;border-top:6px solid var(--sun);padding:1.3rem 1.4rem;max-width:360px;width:100%;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.3)}
+#pwm h3{font-size:1.5rem;margin-bottom:.4rem}
+#pwm p{margin:0 0 1.1rem;color:var(--mut)}
+#pwm .acts{display:flex;gap:.6rem}
+#pwm .acts .btn{flex:1;width:auto;min-height:44px;font-size:1.1rem}
+#pwm .btn.cancel{background:#fff;color:var(--ink);border:2px solid var(--line);box-shadow:none}
+#pwm .f{text-align:left;margin-bottom:.8rem}
+#pwm .l-err{text-align:left}
 </style>
 </head>
 <body>
@@ -205,6 +223,7 @@ header #out{width:auto;min-height:34px;padding:.25rem .7rem;font-size:.9rem;bord
   <header>
     <img src="logo.gif" alt=""><span class="brand">SYNTESYS</span><span class="sp"></span>
     <div class="who"><span id="wN"></span><br><small id="wR"></small></div>
+    <button class="btn sm" id="pwBtn" type="button" title="Cambiar contraseña">Clave</button>
     <button class="btn sm" id="out">Salir</button>
   </header>
   <nav id="nav"></nav>
@@ -213,6 +232,7 @@ header #out{width:auto;min-height:34px;padding:.25rem .7rem;font-size:.9rem;bord
     <section id="t-reg">
       <div class="card">
         <h2 style="margin-bottom:1rem">Registrar tiempo</h2>
+        <p class="hint hide" id="rInfo" style="margin:-.4rem 0 1rem;font-size:1rem"></p>
         <div class="grid">
           <div class="f"><label for="rF">Fecha</label><input id="rF" type="date"></div>
           <div class="f"><label for="rC">Centro de costos</label>
@@ -226,8 +246,16 @@ header #out{width:auto;min-height:34px;padding:.25rem .7rem;font-size:.9rem;bord
         <button class="btn dark hide" id="rCan">Cancelar edición</button>
       </div>
       <div class="card">
-        <h3>Mis últimos registros</h3>
-        <div class="tw" id="mine"></div>
+        <h3>Mis registros</h3>
+        <div class="grid" style="margin-top:.6rem">
+          <div class="f"><label for="mQ">Buscar</label><input id="mQ" placeholder="Centro de costos o actividad…" autocomplete="off"></div>
+          <div class="f"><label for="mD">Desde</label><input id="mD" type="date"></div>
+          <div class="f"><label for="mH">Hasta</label><input id="mH" type="date"></div>
+        </div>
+        <button class="btn dark sm" id="mClr" type="button">Limpiar filtros</button>
+        <div class="tw" id="mine" style="margin-top:.8rem"></div>
+        <p class="hint" id="mInfo"></p>
+        <button class="btn dark more hide" id="mMore" type="button">Ver más registros</button>
       </div>
     </section>
 
@@ -248,6 +276,12 @@ header #out{width:auto;min-height:34px;padding:.25rem .7rem;font-size:.9rem;bord
       <div class="card">
         <div class="tot"><span>Registros: <b id="nR">0</b></span><span>Total horas: <b id="nH">0</b></span></div>
         <div class="tw" id="res"></div>
+      </div>
+      <div class="card">
+        <h3>Copia de seguridad</h3>
+        <p class="hint" style="font-size:1rem">Descarga todos los registros guardados, de todas las fechas y usuarios. Hazlo una vez al mes y guarda el archivo en SharePoint.</p>
+        <button class="btn dark" id="bkX" type="button" style="margin-top:.6rem">Descargar copia (Excel)</button>
+        <button class="btn dark" id="bkJ" type="button">Descargar copia (JSON)</button>
       </div>
     </section>
 
@@ -271,6 +305,12 @@ header #out{width:auto;min-height:34px;padding:.25rem .7rem;font-size:.9rem;bord
         <div class="kpi"><span>Personas activas</span><b id="kP">0</b></div>
         <div class="kpi"><span>Centros de costos</span><b id="kC">0</b></div>
         <div class="kpi"><span>Promedio h/persona</span><b id="kA">0</b></div>
+      </div>
+      <div class="card">
+        <h3>Sin registros recientes</h3>
+        <div class="f" style="max-width:260px;margin-top:.6rem"><label for="mDias">Periodo</label>
+          <select id="mDias"><option value="1">Hoy</option><option value="3" selected>Últimos 3 días</option><option value="7">Últimos 7 días</option><option value="15">Últimos 15 días</option></select></div>
+        <div id="miss" class="chips"></div>
       </div>
       <div class="card"><h3>Horas por centro de costos (top 10)</h3><div class="chbox"><canvas id="gC"></canvas></div></div>
       <div class="dgrid">
@@ -317,6 +357,20 @@ header #out{width:auto;min-height:34px;padding:.25rem .7rem;font-size:.9rem;bord
     </div>
   </div>
 </div>
+<div id="pwm" class="hide" role="dialog" aria-modal="true" aria-labelledby="pwT">
+  <div class="box">
+    <h3 id="pwT">Cambiar contraseña</h3>
+    <p>Escribe tu contraseña actual y la nueva.</p>
+    <div id="pwErr" class="l-err hide" role="alert"></div>
+    <div class="f"><label for="pwO">Contraseña actual</label><input id="pwO" type="password" autocomplete="current-password"></div>
+    <div class="f"><label for="pwN">Nueva contraseña</label><input id="pwN" type="password" autocomplete="new-password" placeholder="Mínimo 6 caracteres"></div>
+    <div class="f"><label for="pwR">Repite la nueva contraseña</label><input id="pwR" type="password" autocomplete="new-password"></div>
+    <div class="acts">
+      <button class="btn cancel" id="pwNo" type="button">Cancelar</button>
+      <button class="btn dark" id="pwYes" type="button">Guardar</button>
+    </div>
+  </div>
+</div>
 <div id="toast" class="hide"></div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -353,6 +407,7 @@ auth.onAuthStateChanged(async u => {
   try{
     const d = await db.collection('users').doc(u.uid).get();
     if(!d.exists){ toast('Tu usuario no tiene perfil. Pide al administrador que lo cree.', true); return auth.signOut(); }
+    if(d.data().activo === false){ toast('Tu usuario está desactivado. Habla con el administrador.', true); return auth.signOut(); }
     me = {uid:u.uid, ...d.data()};
   }catch(e){ toast('No se pudo cargar tu perfil: '+e.message, true); return auth.signOut(); }
   $('#login').classList.add('hide'); $('#app').classList.remove('hide');
@@ -394,7 +449,33 @@ $('#out').onclick = () => { $('#cfm').classList.remove('hide'); $('#cfmNo').focu
 $('#cfmNo').onclick = () => $('#cfm').classList.add('hide');
 $('#cfm').onclick = e => { if(e.target.id==='cfm') $('#cfm').classList.add('hide'); };
 $('#cfmYes').onclick = () => { $('#cfm').classList.add('hide'); auth.signOut(); };
-document.addEventListener('keydown', e => { if(e.key==='Escape') $('#cfm').classList.add('hide'); });
+document.addEventListener('keydown', e => { if(e.key==='Escape'){ $('#cfm').classList.add('hide'); $('#pwm').classList.add('hide'); } });
+
+/* ---------- Cambio de contraseña ---------- */
+const pwErr = m => { const e=$('#pwErr'); e.textContent=m; e.classList.toggle('hide',!m); };
+$('#pwBtn').onclick = () => { ['pwO','pwN','pwR'].forEach(i=>$('#'+i).value=''); pwErr(''); $('#pwm').classList.remove('hide'); $('#pwO').focus(); };
+$('#pwNo').onclick = () => $('#pwm').classList.add('hide');
+$('#pwm').onclick = e => { if(e.target.id==='pwm') $('#pwm').classList.add('hide'); };
+$('#pwYes').onclick = async () => {
+  const o=$('#pwO').value, n=$('#pwN').value, r=$('#pwR').value;
+  if(!o||!n||!r) return pwErr('Completa los tres campos.');
+  if(n.length<6) return pwErr('La nueva contraseña debe tener mínimo 6 caracteres.');
+  if(n!==r) return pwErr('La confirmación no coincide con la nueva contraseña.');
+  if(n===o) return pwErr('La nueva contraseña debe ser distinta a la actual.');
+  const b=$('#pwYes'); b.disabled=true; pwErr('');
+  try{
+    const u = auth.currentUser;
+    await u.reauthenticateWithCredential(firebase.auth.EmailAuthProvider.credential(u.email, o));
+    await u.updatePassword(n);
+    $('#pwm').classList.add('hide'); toast('Contraseña actualizada.');
+  }catch(e){
+    pwErr(e.code==='auth/wrong-password'||e.code==='auth/invalid-credential'?'La contraseña actual es incorrecta.':
+      e.code==='auth/weak-password'?'La nueva contraseña es muy débil.':
+      e.code==='auth/too-many-requests'?'Demasiados intentos. Espera unos minutos.':
+      e.code==='auth/network-request-failed'?'Sin conexión. Revisa tu internet.':'No se pudo cambiar: '+e.message);
+  }
+  b.disabled=false;
+};
 
 /* ---------- Centros de costos ---------- */
 async function loadCentros(){
@@ -463,7 +544,9 @@ $('#rBtn').onclick = async () => {
   try{
     if(editId){
       await db.collection('registros').doc(editId).update({...r, editado:Date.now()});
+      const back = editFrom==='con';
       endEdit(); toast('Registro actualizado.');
+      if(back){ go('con'); $('#cBtn').click(); }
     }else{
       await db.collection('registros').add({...r, uid:me.uid, nombre:me.nombre, creado:Date.now()});
       $('#rQ').value=''; $('#rO').value=''; $('#rC').value=''; toast('Registro guardado.');
@@ -472,32 +555,49 @@ $('#rBtn').onclick = async () => {
   }catch(e){ toast('No se pudo guardar: '+e.message, true); }
 };
 /* ---------- Editar un registro ya guardado ---------- */
-let editId = null, mineList = [];
+let editId = null, editFrom = '', mineList = [];
 function startEdit(id){
-  const r = mineList.find(x=>x.id===id); if(!r) return;
+  const r = mineList.find(x=>x.id===id) || found.find(x=>x.id===id); if(!r) return;
+  editFrom = $('#t-con').classList.contains('hide') ? 'reg' : 'con';
+  if(editFrom==='con') go('reg');
   editId = id;
+  const ajeno = r.uid !== me.uid;
+  $('#rInfo').textContent = ajeno ? `Estás editando un registro de ${r.nombre}.` : '';
+  $('#rInfo').classList.toggle('hide', !ajeno);
   $('#rF').value = r.fecha; $('#rC').value = r.centro; $('#rQ').value = r.cantidad; $('#rU').value = r.unidad; $('#rO').value = r.obs;
   $('#rBtn').textContent = 'Guardar cambios'; $('#rCan').classList.remove('hide');
   $('#t-reg .card').classList.add('editing');
   $('#t-reg').scrollIntoView({behavior:'smooth', block:'start'});
 }
 function endEdit(){
-  editId = null;
+  editId = null; editFrom = '';
+  $('#rInfo').classList.add('hide');
   $('#rQ').value=''; $('#rO').value=''; $('#rC').value=''; $('#rF').value = today(); $('#rU').value = 'horas';
   $('#rBtn').textContent = 'Guardar registro'; $('#rCan').classList.add('hide');
   $('#t-reg .card').classList.remove('editing');
 }
-$('#rCan').onclick = () => { endEdit(); toast('Edición cancelada.'); };
+$('#rCan').onclick = () => { const back = editFrom==='con'; endEdit(); toast('Edición cancelada.'); if(back) go('con'); };
 const fmtT = r => `${r.cantidad} ${r.unidad === 'horas' ? 'h' : 'min'}`;
+let mineShown = 30;
 async function loadMine(){
   const s = await db.collection('registros').where('uid','==',me.uid).get();
-  const l = s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>b.fecha.localeCompare(a.fecha)||b.creado-a.creado).slice(0,30);
-  mineList = l;
+  mineList = s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>b.fecha.localeCompare(a.fecha)||b.creado-a.creado);
+  renderMine();
+}
+function renderMine(){
+  const q = norm($('#mQ').value).split(/\s+/).filter(Boolean), d = $('#mD').value, h = $('#mH').value;
+  const f = mineList.filter(r => (!d||r.fecha>=d) && (!h||r.fecha<=h) && q.every(w => norm(r.centro+' '+r.obs).includes(w)));
+  const l = f.slice(0, mineShown);
   $('#mine').innerHTML = l.length ? `<table><tr><th>Fecha</th><th>Centro de costos</th><th>Tiempo</th><th>Observaciones</th><th></th></tr>`+
     l.map(r=>`<tr><td>${r.fecha}</td><td>${esc(r.centro)}</td><td>${fmtT(r)}</td><td class="obs">${esc(r.obs)}</td><td><button class="lnk ed" data-edit="${r.id}">Editar</button> <button class="lnk" data-del="${r.id}">Eliminar</button></td></tr>`).join('')+'</table>'
-    : '<div class="empty">Aún no tienes registros. Completa el formulario de arriba.</div>';
+    : (mineList.length ? '<div class="empty">Ningún registro coincide con los filtros.</div>' : '<div class="empty">Aún no tienes registros. Completa el formulario de arriba.</div>');
   rs($('#mine'));
+  $('#mInfo').textContent = mineList.length ? `Mostrando ${l.length} de ${f.length} registros` + (f.length!==mineList.length ? ` (filtrados de ${mineList.length})` : '') : '';
+  $('#mMore').classList.toggle('hide', f.length <= mineShown);
 }
+['mQ','mD','mH'].forEach(id => $('#'+id).addEventListener('input', () => { mineShown = 30; renderMine(); }));
+$('#mClr').onclick = () => { $('#mQ').value=''; $('#mD').value=''; $('#mH').value=''; mineShown = 30; renderMine(); };
+$('#mMore').onclick = () => { mineShown += 30; renderMine(); };
 $('#mine').onclick = async e => {
   if(e.target.dataset.edit) return startEdit(e.target.dataset.edit);
   const id = e.target.dataset.del; if(!id || !confirm('¿Eliminar este registro?')) return;
@@ -509,10 +609,13 @@ $('#mine').onclick = async e => {
 async function loadUsers(){
   const s = await db.collection('users').get();
   users = s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.nombre.localeCompare(b.nombre));
-  const opt = '<option value="">Todos</option>' + users.map(u=>`<option value="${u.id}">${esc(u.nombre)}</option>`).join('');
+  const opt = '<option value="">Todos</option>' + users.map(u=>`<option value="${u.id}">${esc(u.nombre)}${u.activo===false?' (inactivo)':''}</option>`).join('');
   $('#cU').innerHTML = opt;
   const dv = $('#dU').value; $('#dU').innerHTML = opt; $('#dU').value = dv;
-  $('#uList').innerHTML = `<table><tr><th>Nombre</th><th>Correo</th><th>Rol</th></tr>${users.map(u=>`<tr><td>${esc(u.nombre)}</td><td>${esc(u.email)}</td><td>${esc(u.rol)}</td></tr>`).join('')}</table>`; rs($('#uList'));
+  $('#uList').innerHTML = `<table><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Estado</th><th></th></tr>${users.map(u=>{
+    const off = u.activo===false;
+    return `<tr><td>${esc(u.nombre)}</td><td>${esc(u.email)}</td><td>${esc(u.rol)}</td><td><span class="tag${off?' off':''}">${off?'Inactivo':'Activo'}</span></td><td>${u.id===me.uid?'':`<button class="lnk${off?' ed':''}" data-tog="${u.id}" data-to="${off?'1':'0'}">${off?'Activar':'Desactivar'}</button>`}</td></tr>`;
+  }).join('')}</table>`; rs($('#uList'));
 }
 $('#cBtn').onclick = async () => {
   const d=$('#cD').value, h=$('#cH').value; if(!d||!h) return toast('Indica el rango de fechas.', true);
@@ -522,11 +625,37 @@ $('#cBtn').onclick = async () => {
     .sort((a,b)=>b.fecha.localeCompare(a.fecha)||a.nombre.localeCompare(b.nombre));
   $('#nR').textContent = found.length;
   $('#nH').textContent = (found.reduce((t,r)=>t+r.minutos,0)/60).toFixed(2);
-  $('#res').innerHTML = found.length ? `<table><tr><th>Fecha</th><th>Usuario</th><th>Centro de costos</th><th>Tiempo</th><th>Horas</th><th>Observaciones</th></tr>`+
-    found.map(r=>`<tr><td>${r.fecha}</td><td>${esc(r.nombre)}</td><td>${esc(r.centro)}</td><td>${fmtT(r)}</td><td>${(r.minutos/60).toFixed(2)}</td><td class="obs">${esc(r.obs)}</td></tr>`).join('')+'</table>'
+  $('#res').innerHTML = found.length ? `<table><tr><th>Fecha</th><th>Usuario</th><th>Centro de costos</th><th>Tiempo</th><th>Horas</th><th>Observaciones</th><th></th></tr>`+
+    found.map(r=>`<tr><td>${r.fecha}</td><td>${esc(r.nombre)}</td><td>${esc(r.centro)}</td><td>${fmtT(r)}</td><td>${(r.minutos/60).toFixed(2)}</td><td class="obs">${esc(r.obs)}</td><td><button class="lnk ed" data-aedit="${r.id}">Editar</button> <button class="lnk" data-adel="${r.id}">Eliminar</button></td></tr>`).join('')+'</table>'
     : '<div class="empty">No hay registros con esos filtros. Prueba ampliando las fechas.</div>';
   rs($('#res'));
 };
+$('#res').onclick = async e => {
+  const ed = e.target.dataset.aedit, dl = e.target.dataset.adel;
+  if(ed) return startEdit(ed);
+  if(!dl || !sup() || !confirm('¿Eliminar este registro? Esta acción no se puede deshacer.')) return;
+  try{
+    await db.collection('registros').doc(dl).delete();
+    if(dl===editId) endEdit();
+    toast('Registro eliminado.'); $('#cBtn').click();
+  }catch(err){ toast('No se pudo eliminar: '+err.message, true); }
+};
+function resumenSheet(data, n){
+  const rU = `Registros!$B$2:$B$${n+1}`, rC = `Registros!$C$2:$C$${n+1}`, rH = `Registros!$F$2:$F$${n+1}`;
+  const agg = k => { const m={}; data.forEach(r=>{ m[r[k]] = (m[r[k]]||0) + r['Horas equivalentes']; }); return Object.entries(m).sort((a,b)=>b[1]-a[1]); };
+  const byU = agg('Usuario'), byC = agg('Centro de costos');
+  const num = (f,v) => ({t:'n', f, v:+v.toFixed(2)});
+  const aoa = [['Total por usuario'], ['Usuario','Horas']];
+  byU.forEach((x,i)=>aoa.push([x[0], num(`SUMIF(${rU},A${i+3},${rH})`, x[1])]));
+  aoa.push(['TOTAL', num(`SUM(B3:B${byU.length+2})`, byU.reduce((t,x)=>t+x[1],0))]);
+  aoa.push([]);
+  const st = aoa.length + 1;
+  aoa.push(['Total por centro de costos'], ['Centro de costos','Horas']);
+  byC.forEach((x,i)=>aoa.push([x[0], num(`SUMIF(${rC},A${st+2+i},${rH})`, x[1])]));
+  aoa.push(['TOTAL', num(`SUM(B${st+2}:B${st+1+byC.length})`, byC.reduce((t,x)=>t+x[1],0))]);
+  const ws = XLSX.utils.aoa_to_sheet(aoa); ws['!cols'] = [{wch:46},{wch:12}];
+  return ws;
+}
 $('#xBtn').onclick = () => {
   if(!found.length) return toast('Primero consulta para tener datos que exportar.', true);
   const data = found.map(r=>({Fecha:r.fecha, Usuario:r.nombre, 'Centro de costos':r.centro, Cantidad:r.cantidad, Unidad:r.unidad, 'Horas equivalentes':+(r.minutos/60).toFixed(2), Observaciones:r.obs}));
@@ -538,7 +667,39 @@ $('#xBtn').onclick = () => {
   ws['F'+fila] = {t:'n', f:`SUM(F2:F${n+1})`, v:suma};
   ws['!ref'] = 'A1:G'+fila;
   const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Registros');
+  XLSX.utils.book_append_sheet(wb, resumenSheet(data, n), 'Resumen');
   XLSX.writeFile(wb, `Registro_tiempos_${$('#cD').value}_a_${$('#cH').value}.xlsx`);
+};
+
+/* ---------- Copia de seguridad ---------- */
+async function backupData(btn){
+  btn.disabled = true;
+  try{
+    const s = await db.collection('registros').get();
+    if(!users.length) await loadUsers();
+    const rows = s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.fecha.localeCompare(b.fecha)||String(a.nombre).localeCompare(String(b.nombre)));
+    return rows;
+  }catch(e){ toast('No se pudo generar la copia: '+e.message, true); return null; }
+  finally{ btn.disabled = false; }
+}
+const fmtDT = ms => ms ? new Date(ms).toLocaleString('es-CO') : '';
+$('#bkX').onclick = async () => {
+  const rows = await backupData($('#bkX')); if(!rows) return;
+  const reg = rows.map(r=>({Fecha:r.fecha, Usuario:r.nombre, 'Centro de costos':r.centro, Cantidad:r.cantidad, Unidad:r.unidad, Minutos:r.minutos, 'Horas equivalentes':+(r.minutos/60).toFixed(2), Observaciones:r.obs, Creado:fmtDT(r.creado), Editado:fmtDT(r.editado), ID:r.id, UID:r.uid}));
+  const usr = users.map(u=>({Nombre:u.nombre, Correo:u.email, Rol:u.rol, Estado:u.activo===false?'Inactivo':'Activo', UID:u.id}));
+  const wb = XLSX.utils.book_new();
+  const w1 = XLSX.utils.json_to_sheet(reg); w1['!cols']=[{wch:12},{wch:26},{wch:34},{wch:10},{wch:10},{wch:10},{wch:18},{wch:60},{wch:20},{wch:20},{wch:24},{wch:30}];
+  XLSX.utils.book_append_sheet(wb, w1, 'Registros');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(usr), 'Usuarios');
+  XLSX.writeFile(wb, `Respaldo_registros_${today()}.xlsx`);
+  toast(`Copia descargada: ${rows.length} registros.`);
+};
+$('#bkJ').onclick = async () => {
+  const rows = await backupData($('#bkJ')); if(!rows) return;
+  const blob = new Blob([JSON.stringify({generado:new Date().toISOString(), registros:rows, usuarios:users}, null, 2)], {type:'application/json'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `Respaldo_registros_${today()}.json`;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
+  toast(`Copia descargada: ${rows.length} registros.`);
 };
 
 /* ---------- Dashboard ---------- */
@@ -579,8 +740,29 @@ async function loadDash(){
   let us = byU.slice(0,8); const rest = byU.slice(8).reduce((t,x)=>t+x[1],0); if(rest>0) us.push(['Otros',rest]);
   drawChart('gU', {type:'doughnut', data:{labels:us.map(x=>x[0]), datasets:[{data:us.map(x=>r2(x[1])), backgroundColor:PAL, borderColor:'#fff', borderWidth:2}]},
     options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom', labels:{boxWidth:12}}}}});
+  loadMissing();
 }
+const addDays = (str,n) => { const [y,m,d]=str.split('-').map(Number); const t=new Date(y,m-1,d+n); return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`; };
+async function loadMissing(){
+  try{
+    if(!users.length) await loadUsers();
+    const n = +$('#mDias').value, desde = addDays(today(), -(n-1));
+    const s = await db.collection('registros').where('fecha','>=',desde).get();
+    const con = new Set(s.docs.map(x=>x.data().uid));
+    const faltan = users.filter(u => u.activo!==false && !con.has(u.id));
+    $('#miss').innerHTML = faltan.length ? faltan.map(u=>`<span class="chip warn">${esc(u.nombre)}</span>`).join('')
+      : '<span class="chip">Todos los usuarios activos registraron tiempo en este periodo.</span>';
+  }catch(e){ $('#miss').innerHTML = '<span class="chip">No se pudo cargar: '+esc(e.message)+'</span>'; }
+}
+$('#mDias').onchange = loadMissing;
 $('#dBtn').onclick = loadDash;
+$('#uList').onclick = async e => {
+  const id = e.target.dataset.tog; if(!id) return;
+  const activar = e.target.dataset.to==='1', u = users.find(x=>x.id===id); if(!u) return;
+  if(!confirm(activar ? `¿Activar a ${u.nombre}?` : `¿Desactivar a ${u.nombre}? No podrá ingresar ni registrar tiempo. Sus registros se conservan.`)) return;
+  try{ await db.collection('users').doc(id).update({activo:activar}); toast(activar?'Usuario activado.':'Usuario desactivado.'); loadUsers(); }
+  catch(err){ toast('No se pudo actualizar: '+err.message, true); }
+};
 $('#dClr').onclick = () => { $('#dU').value=''; $('#dC').value=''; loadDash(); };
 
 /* ---------- Crear usuarios ---------- */
@@ -590,7 +772,7 @@ $('#uBtn').onclick = async () => {
   try{
     const sec = firebase.apps.find(a=>a.name==='sec') || firebase.initializeApp(firebaseConfig,'sec');
     const cred = await sec.auth().createUserWithEmailAndPassword(e,p); await sec.auth().signOut();
-    await db.collection('users').doc(cred.user.uid).set({nombre:n,email:e,rol});
+    await db.collection('users').doc(cred.user.uid).set({nombre:n,email:e,rol,activo:true});
     ['uN','uE','uP'].forEach(i=>$('#'+i).value=''); toast('Usuario creado.'); loadUsers();
   }catch(err){ toast(err.code==='auth/email-already-in-use'?'Ese correo ya está registrado.':'No se pudo crear: '+err.message, true); }
 };
