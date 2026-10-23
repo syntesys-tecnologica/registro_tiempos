@@ -288,17 +288,23 @@ header #out{box-shadow:0 2px 0 var(--sunD)}
         <div class="tot"><span>Registros: <b id="nR">0</b></span><span>Total horas: <b id="nH">0</b></span></div>
         <div class="tw" id="res"></div>
       </div>
+    </section>
+
+    <!-- Copia de seguridad -->
+    <section id="t-bak" class="hide">
       <div class="card">
-        <h3>Copia de seguridad</h3>
+        <h2 style="margin-bottom:.6rem">Copia de seguridad</h2>
         <p class="hint" style="font-size:1rem">Descarga todos los registros guardados, de todas las fechas y usuarios. Hazlo una vez al mes y guarda el archivo en SharePoint.</p>
         <button class="btn dark" id="bkX" type="button" style="margin-top:.6rem">Descargar copia (Excel)</button>
         <button class="btn dark" id="bkJ" type="button">Descargar copia (JSON)</button>
+        <div id="rsBox">
         <hr style="border:0;border-top:1px solid var(--line);margin:1.2rem 0">
         <h3 style="font-size:1.15rem">Restaurar desde una copia</h3>
         <p class="hint" style="font-size:1rem">Sube un archivo JSON descargado antes. Solo se agregan los registros que no existen: no se modifica ni se borra nada.</p>
         <div class="f" style="margin-top:.6rem"><input id="rsF" type="file" accept=".json,application/json"></div>
         <button class="btn" id="rsBtn" type="button">Restaurar copia</button>
         <p class="hint" id="rsInfo"></p>
+        </div>
       </div>
     </section>
 
@@ -367,10 +373,10 @@ header #out{box-shadow:0 2px 0 var(--sunD)}
     <section id="t-per" class="hide">
       <div class="card">
         <h2 style="margin-bottom:.4rem">Perfiles y permisos</h2>
-        <p class="hint" style="font-size:1rem;margin-bottom:1rem">Define qué pestañas ve cada perfil. El Administrador siempre tiene control total. Centros, Usuarios y Perfiles son solo del Administrador.</p>
+        <p class="hint" style="font-size:1rem;margin-bottom:1rem">Define qué pestañas ve cada perfil. El Administrador siempre tiene control total. Centros, Usuarios y Perfiles son solo del Administrador. La pestaña Copia de seguridad (descargar y restaurar) es opcional: actívala solo en los perfiles que la necesiten.</p>
         <div class="f"><label for="pN">Nombre del perfil</label><input id="pN" placeholder="Ej: Auditor"></div>
         <div class="f"><label>Pestañas con acceso</label>
-          <div class="chk"><label><input type="checkbox" id="pt-reg"> Registrar</label><label><input type="checkbox" id="pt-con"> Consultar</label><label><input type="checkbox" id="pt-dash"> Dashboard</label></div></div>
+          <div class="chk"><label><input type="checkbox" id="pt-reg"> Registrar</label><label><input type="checkbox" id="pt-con"> Consultar</label><label><input type="checkbox" id="pt-dash"> Dashboard</label><label><input type="checkbox" id="pt-bak"> Copia de seguridad</label></div></div>
         <button class="btn" id="pBtn">Guardar perfil</button>
         <button class="btn dark hide" id="pCan">Cancelar</button>
       </div>
@@ -433,8 +439,8 @@ function toast(msg, err){ const t=$('#toast'); t.textContent=msg; t.className=er
 const sup = () => me && me.rol === 'administrador';
 
 /* ---------- Perfiles y permisos por pestaña ---------- */
-const TABS = {reg:'Registrar', con:'Consultar', dash:'Dashboard', cc:'Centros', usr:'Usuarios', per:'Perfiles'};
-const ASIG = ['reg','con','dash'];   // pestañas que el administrador puede dar a otros perfiles
+const TABS = {reg:'Registrar', con:'Consultar', dash:'Dashboard', bak:'Copia de seguridad', cc:'Centros', usr:'Usuarios', per:'Perfiles'};
+const ASIG = ['reg','con','dash','bak'];   // pestañas que el administrador puede dar a otros perfiles
 let perfiles = {}, perEdit = null;
 const defPerf = () => ({supervisor:{nombre:'Supervisor',tabs:['reg','con','dash']}, usuario:{nombre:'Usuario',tabs:['reg']}});
 const tabsDe = r => r==='administrador' ? Object.keys(TABS) : ((perfiles[r]&&perfiles[r].tabs)||[]).filter(t=>ASIG.includes(t));
@@ -502,17 +508,18 @@ auth.onAuthStateChanged(async u => {
   $('#nav').onclick = e => e.target.dataset.t && go(e.target.dataset.t);
   $('#rF').value = today(); $('#cD').value = today().slice(0,8)+'01'; $('#cH').value = today();
   await loadCentros(); go(tabs[0][0]);
-  if(sup() || can('con') || can('dash')) loadUsers();
+  if(sup() || can('con') || can('dash') || can('bak')) loadUsers();
 });
 function rs(el){ const t=el.querySelector('table'); if(!t) return; t.classList.add('rs');
   const h=[...t.rows[0].cells].map(c=>c.textContent);
   [...t.rows].slice(1).forEach(r=>[...r.cells].forEach((c,i)=>c.dataset.label=h[i]||'')); }
 function go(t){
-  ['reg','con','dash','cc','usr','per'].forEach(x=>$('#t-'+x).classList.toggle('hide',x!==t));
+  ['reg','con','dash','bak','cc','usr','per'].forEach(x=>$('#t-'+x).classList.toggle('hide',x!==t));
   document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
   if(t==='reg') loadMine();
   if(t==='dash') loadDash();
   if(t==='per') renderPer();
+  if(t==='bak') $('#rsBox').classList.toggle('hide', !sup());
 }
 const lErr = m => { const e=$('#lErr'); e.textContent=m; e.classList.toggle('hide',!m); };
 $('#lBtn').onclick = async () => {
@@ -788,6 +795,7 @@ $('#bkJ').onclick = async () => {
 
 /* ---------- Restaurar copia (JSON) ---------- */
 $('#rsBtn').onclick = async () => {
+  if(!sup()) return toast('Solo el administrador puede restaurar copias.', true);
   const info = m => { $('#rsInfo').textContent = m; };
   const f = $('#rsF').files[0]; if(!f) return toast('Selecciona el archivo JSON de la copia.', true);
   let data;
