@@ -457,11 +457,12 @@ const rolOpts = sel => [['administrador','Administrador'],...Object.entries(perf
   .map(([id,n])=>`<option value="${esc(id)}"${id===sel?' selected':''}>${esc(n)}</option>`).join('')
   + (sel && sel!=='administrador' && !perfiles[sel] ? `<option value="${esc(sel)}" selected>${esc(sel)} (sin perfil)</option>` : '');
 const rolSel = u => `<select class="rsel" data-rol="${u.id}">${rolOpts(u.rol)}</select>`;
-function fillRoles(){ const v=$('#uR').value; $('#uR').innerHTML = rolOpts(v||'usuario'); }
+function fillRoles(){ const v=$('#uR').value; const ok=v==='administrador'||perfiles[v];
+  $('#uR').innerHTML = rolOpts(ok ? v : (perfiles.usuario ? 'usuario' : (Object.keys(perfiles)[0]||'administrador'))); }
 function renderPer(){
   const rows = [['administrador',{nombre:'Administrador',tabs:[]},true], ...Object.entries(perfiles).map(([id,p])=>[id,p,false])];
   $('#perList').innerHTML = `<table><tr><th>Perfil</th><th>Acceso a</th><th>Usuarios</th><th></th></tr>${rows.map(([id,p,fijo])=>
-    `<tr><td>${esc(p.nombre)}</td><td>${fijo?'Control total':(p.tabs.map(t=>TABS[t]).join(', ')||'—')}</td><td>${users.filter(u=>u.rol===id).length}</td><td>${fijo?'':`<button class="lnk ed" data-pe="${esc(id)}">Editar</button>${id==='usuario'?'':` <button class="lnk" data-pd="${esc(id)}">Eliminar</button>`}`}</td></tr>`).join('')}</table>`;
+    `<tr><td>${esc(p.nombre)}</td><td>${fijo?'Control total':(p.tabs.map(t=>TABS[t]).join(', ')||'—')}</td><td>${users.filter(u=>u.rol===id).length}</td><td>${fijo?'':`<button class="lnk ed" data-pe="${esc(id)}">Editar</button> <button class="lnk" data-pd="${esc(id)}">Eliminar</button>`}</td></tr>`).join('')}</table>`;
   rs($('#perList'));
 }
 async function savePer(n,msg){
