@@ -161,7 +161,7 @@ input[type="date"]::-webkit-calendar-picker-indicator{margin:0;padding:0}
 @media(max-width:760px){
   .dgrid{grid-template-columns:1fr}
   .chbox{height:260px}
-  nav button{font-size:.95rem;padding:.75rem .1rem}
+  nav button{font-size:.85rem;padding:.75rem .1rem}
 }
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
 /* Estados, chips y botones nuevos */
@@ -285,18 +285,6 @@ header #out{box-shadow:0 2px 0 var(--sunD)}
         <div class="tot"><span>Registros: <b id="nR">0</b></span><span>Total horas: <b id="nH">0</b></span></div>
         <div class="tw" id="res"></div>
       </div>
-      <div class="card">
-        <h3>Copia de seguridad</h3>
-        <p class="hint" style="font-size:1rem">Descarga todos los registros guardados, de todas las fechas y usuarios. Hazlo una vez al mes y guarda el archivo en SharePoint.</p>
-        <button class="btn dark" id="bkX" type="button" style="margin-top:.6rem">Descargar copia (Excel)</button>
-        <button class="btn dark" id="bkJ" type="button">Descargar copia (JSON)</button>
-        <hr style="border:0;border-top:1px solid var(--line);margin:1.2rem 0">
-        <h3 style="font-size:1.15rem">Restaurar desde una copia</h3>
-        <p class="hint" style="font-size:1rem">Sube un archivo JSON descargado antes. Solo se agregan los registros que no existen: no se modifica ni se borra nada.</p>
-        <div class="f" style="margin-top:.6rem"><input id="rsF" type="file" accept=".json,application/json"></div>
-        <button class="btn" id="rsBtn" type="button">Restaurar copia</button>
-        <p class="hint" id="rsInfo"></p>
-      </div>
     </section>
 
     <!-- Dashboard -->
@@ -358,6 +346,24 @@ header #out{box-shadow:0 2px 0 var(--sunD)}
         <button class="btn" id="uBtn">Crear usuario</button>
       </div>
       <div class="card"><h3>Usuarios</h3><div class="tw" id="uList"></div></div>
+    </section>
+
+    <!-- Respaldo -->
+    <section id="t-bk" class="hide">
+      <div class="card">
+        <h2 style="margin-bottom:.4rem">Descargar copia de seguridad</h2>
+        <p class="hint" style="font-size:1rem">Incluye todos los registros guardados, de todas las fechas y usuarios. Hazlo una vez al mes y guarda el archivo en SharePoint.</p>
+        <p class="hint" style="font-size:1rem">El <b>Excel</b> sirve para consultar. El <b>JSON</b> sirve para restaurar.</p>
+        <button class="btn dark" id="bkX" type="button" style="margin-top:.8rem">Descargar copia (Excel)</button>
+        <button class="btn dark" id="bkJ" type="button">Descargar copia (JSON)</button>
+      </div>
+      <div class="card">
+        <h2 style="margin-bottom:.4rem">Restaurar desde una copia</h2>
+        <p class="hint" style="font-size:1rem">Sube un archivo JSON descargado antes. Solo se agregan los registros que no existen: no se modifica ni se borra nada.</p>
+        <div class="f" style="margin-top:.8rem"><input id="rsF" type="file" accept=".json,application/json"></div>
+        <button class="btn" id="rsBtn" type="button">Restaurar copia</button>
+        <p class="hint" id="rsInfo"></p>
+      </div>
     </section>
   </main>
 </div>
@@ -427,7 +433,7 @@ auth.onAuthStateChanged(async u => {
   $('#login').classList.add('hide'); $('#app').classList.remove('hide');
   $('#wN').textContent = me.nombre; $('#wR').textContent = sup() ? 'Administrador' : 'Usuario';
   const tabs = [['reg','Registrar']];
-  if(sup()) tabs.push(['con','Consultar'],['dash','Dashboard'],['cc','Centros'],['usr','Usuarios']);
+  if(sup()) tabs.push(['con','Consultar'],['dash','Dashboard'],['cc','Centros'],['usr','Usuarios'],['bk','Respaldo']);
   $('#nav').innerHTML = tabs.map(t=>`<button data-t="${t[0]}">${t[1]}</button>`).join('');
   $('#nav').classList.toggle('hide',tabs.length===1); document.body.classList.toggle('solo',tabs.length===1);
   $('#nav').onclick = e => e.target.dataset.t && go(e.target.dataset.t);
@@ -439,7 +445,7 @@ function rs(el){ const t=el.querySelector('table'); if(!t) return; t.classList.a
   const h=[...t.rows[0].cells].map(c=>c.textContent);
   [...t.rows].slice(1).forEach(r=>[...r.cells].forEach((c,i)=>c.dataset.label=h[i]||'')); }
 function go(t){
-  ['reg','con','dash','cc','usr'].forEach(x=>$('#t-'+x).classList.toggle('hide',x!==t));
+  ['reg','con','dash','cc','usr','bk'].forEach(x=>$('#t-'+x).classList.toggle('hide',x!==t));
   document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
   if(t==='reg') loadMine();
   if(t==='dash') loadDash();
