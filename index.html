@@ -492,8 +492,21 @@ async function saveFes(n, msg){
   catch(err){ toast('No se pudo guardar: '+err.message, true); return false; }
 }
 const dayMin = f => mineList.filter(r => r.fecha === f).reduce((t,r) => t + r.minutos, 0);
-const grande = r => r.minutos > MIN_DIA;               // un solo registro con más de 8 h
-const flagG = r => grande(r) ? '<span class="flag">+8 h</span>' : '';
+/* Horas extra: dentro de cada día y usuario, se suman los registros en el orden en que se crearon;
+   el registro que hace pasar el total de 8 h (y los siguientes) queda resaltado con sus horas extra */
+function calcExtra(list){
+  const g = {}, m = {};
+  list.forEach(r => { const k = r.uid+'|'+r.fecha; (g[k] = g[k] || []).push(r); });
+  Object.values(g).forEach(a => {
+    a.sort((x,y) => (x.creado||0) - (y.creado||0));
+    let c = 0;
+    a.forEach(r => { c += r.minutos; if(c > MIN_DIA) m[r.id] = Math.min(r.minutos, c - MIN_DIA); });
+  });
+  return m;
+}
+let extrasM = {}, extrasC = {};                          // Mis registros / Consulta
+const grande = (r, m) => !!m[r.id];
+const flagG = (r, m) => m[r.id] ? `<span class="flag">+${hh(m[r.id])} h extra</span>` : '';
 /* Solo el administrador puede tocar registros antiguos; los demás perfiles, únicamente hoy y ayer */
 const puedeEditar = r => sup() || r.fecha >= addDays(today(), -1);
 const MSG_VENTANA = 'Solo puedes editar o eliminar registros del día de hoy y del día anterior.';
@@ -509,7 +522,7 @@ function renderDay(){
     const pct = Math.min(100, Math.round(tot/MIN_DIA*100));
     html = warn
       ? `<b>Jornada incompleta (${esc(f)}):</b> llevas ${hh(tot)} h de 8 h. Te faltan <b>${hh(MIN_DIA-tot)} h</b> para el mínimo diario.`
-      : `<b>Jornada completa (${esc(f)}):</b> ${hh(tot)} h registradas. ¡Cumples el mínimo de 8 h!`;
+      : `<b>Jornada completa (${esc(f)}):</b> ${hh(tot)} h registradas. ¡Cumples el mínimo de 8 h!${tot>MIN_DIA?` (+${hh(tot-MIN_DIA)} h extra)`:''}`;
     html += `<div class="bar"><i style="width:${pct}%"></i></div>`;
   }else{
     const fe = festivos.find(x => x.fecha === f);
@@ -517,7 +530,10 @@ function renderDay(){
   }
   if(f!==ayer && esLab(ayer) && dayMin(ayer) < MIN_DIA){
     warn = true;
-    html += `<p><b>Pendiente:</b> ayer (${esc(ayer)}) solo registraste ${hh(dayMin(ayer))} h. Aún puedes completarlo hoy: cambia la fecha del formulario a ayer.</p>`;
+    const ha = dayMin(ayer);
+    html += ha === 0
+      ? `<p><b>Pendiente:</b> ayer (${esc(ayer)}) no has registrado horas. Aún puedes completarlo hoy.</p>`
+      : `<p><b>Pendiente:</b> ayer (${esc(ayer)}) has registrado ${hh(ha)} horas.</p>`;
   }
   b.innerHTML = html; b.classList.toggle('info', !lab && !warn); b.classList.toggle('warn', warn); b.classList.toggle('hide', !html);
 }
@@ -736,7 +752,7 @@ $('#rBtn').onclick = async () => {
       $('#rQ').value=''; $('#rO').value=''; $('#rC').value=''; toast('Registro guardado.');
     }
     await loadMine();
-    if(r.minutos > MIN_DIA) toast(`Registro guardado. Nota: este registro supera las 8 h (${hh(r.minutos)} h) y queda resaltado.`, true);
+    if(esLab(r.fecha) && dayMin(r.fecha) > MIN_DIA) toast(`Registro guardado. El ${r.fecha} suma ${hh(dayMin(r.fecha))} h: ${hh(dayMin(r.fecha)-MIN_DIA)} h por encima de las 8 h.`, true);
     else avisoDia(r.fecha);
   }catch(e){ toast('No se pudo guardar: '+e.message, true); }
 };
@@ -770,6 +786,7 @@ let mineShown = 30;
 async function loadMine(){
   const s = await db.collection('registros').where('uid','==',me.uid).get();
   mineList = s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>b.fecha.localeCompare(a.fecha)||b.creado-a.creado);
+  extrasM = calcExtra(mineList);
   renderMine(); renderDay();
 }
 $('#rF').addEventListener('change', renderDay);
@@ -778,7 +795,7 @@ function renderMine(){
   const f = mineList.filter(r => (!d||r.fecha>=d) && (!h||r.fecha<=h) && q.every(w => norm(r.centro+' '+r.obs).includes(w)));
   const l = f.slice(0, mineShown);
   $('#mine').innerHTML = l.length ? `<table><tr><th>Fecha</th><th>Centro de costos</th><th>Tiempo</th><th>Observaciones</th><th></th></tr>`+
-    l.map(r=>`<tr${grande(r)?' class="big"':''}><td>${r.fecha}</td><td>${esc(r.centro)}</td><td>${fmtT(r)}${flagG(r)}</td><td class="obs">${esc(r.obs)}</td><td>${puedeEditar(r)?`<button class="lnk ed" data-edit="${r.id}">Editar</button> <button class="lnk" data-del="${r.id}">Eliminar</button>`:'<span class="lock" title="Solo se editan registros de hoy y ayer">Bloqueado</span>'}</td></tr>`).join('')+'</table>'
+    l.map(r=>`<tr${grande(r,extrasM)?' class="big"':''}><td>${r.fecha}</td><td>${esc(r.centro)}</td><td>${fmtT(r)}${flagG(r,extrasM)}</td><td class="obs">${esc(r.obs)}</td><td>${puedeEditar(r)?`<button class="lnk ed" data-edit="${r.id}">Editar</button> <button class="lnk" data-del="${r.id}">Eliminar</button>`:'<span class="lock" title="Solo se editan registros de hoy y ayer">Bloqueado</span>'}</td></tr>`).join('')+'</table>'
     : (mineList.length ? '<div class="empty">Ningún registro coincide con los filtros.</div>' : '<div class="empty">Aún no tienes registros. Completa el formulario de arriba.</div>');
   rs($('#mine'));
   $('#mInfo').textContent = mineList.length ? `Mostrando ${l.length} de ${f.length} registros` + (f.length!==mineList.length ? ` (filtrados de ${mineList.length})` : '') : '';
@@ -812,12 +829,14 @@ $('#cBtn').onclick = async () => {
   const d=$('#cD').value, h=$('#cH').value; if(!d||!h) return toast('Indica el rango de fechas.', true);
   const s = await db.collection('registros').where('fecha','>=',d).where('fecha','<=',h).get();
   const u=$('#cU').value, c=$('#cC').value.trim();
-  found = s.docs.map(x=>({id:x.id,...x.data()})).filter(r=>(!u||r.uid===u)&&(!c||r.centro===c))
+  const todos = s.docs.map(x=>({id:x.id,...x.data()}));
+  extrasC = calcExtra(todos);
+  found = todos.filter(r=>(!u||r.uid===u)&&(!c||r.centro===c))
     .sort((a,b)=>b.fecha.localeCompare(a.fecha)||a.nombre.localeCompare(b.nombre));
   $('#nR').textContent = found.length;
   $('#nH').textContent = (found.reduce((t,r)=>t+r.minutos,0)/60).toFixed(2);
   $('#res').innerHTML = found.length ? `<table><tr><th>Fecha</th><th>Usuario</th><th>Centro de costos</th><th>Tiempo</th><th>Horas</th><th>Observaciones</th>${sup()?'<th></th>':''}</tr>`+
-    found.map(r=>`<tr${grande(r)?' class="big"':''}><td>${r.fecha}</td><td>${esc(r.nombre)}</td><td>${esc(r.centro)}</td><td>${fmtT(r)}${flagG(r)}</td><td>${(r.minutos/60).toFixed(2)}</td><td class="obs">${esc(r.obs)}</td>${sup()?`<td><button class="lnk ed" data-aedit="${r.id}">Editar</button> <button class="lnk" data-adel="${r.id}">Eliminar</button></td>`:''}</tr>`).join('')+'</table>'
+    found.map(r=>`<tr${grande(r,extrasC)?' class="big"':''}><td>${r.fecha}</td><td>${esc(r.nombre)}</td><td>${esc(r.centro)}</td><td>${fmtT(r)}${flagG(r,extrasC)}</td><td>${(r.minutos/60).toFixed(2)}</td><td class="obs">${esc(r.obs)}</td>${sup()?`<td><button class="lnk ed" data-aedit="${r.id}">Editar</button> <button class="lnk" data-adel="${r.id}">Eliminar</button></td>`:''}</tr>`).join('')+'</table>'
     : '<div class="empty">No hay registros con esos filtros. Prueba ampliando las fechas.</div>';
   rs($('#res'));
 };
