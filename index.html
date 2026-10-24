@@ -836,7 +836,7 @@ $('#cBtn').onclick = async () => {
     .sort((a,b)=>b.fecha.localeCompare(a.fecha)||a.nombre.localeCompare(b.nombre));
   $('#nR').textContent = found.length;
   $('#nH').textContent = (found.reduce((t,r)=>t+r.minutos,0)/60).toFixed(2);
-  $('#res').innerHTML = found.length ? `<table><tr><th>Fecha</th><th>Usuario</th><th>Centro de costos</th><th>Tiempo</th><th>Horas</th><th>Observaciones</th>${sup()?'<th></th>':''}</tr>`+
+  $('#res').innerHTML = found.length ? `<table><tr><th>Fecha</th><th>Usuario</th><th>Centro de costos</th><th>Tiempo</th><th>Horas</th><th>Actividad Realizada</th>${sup()?'<th></th>':''}</tr>`+
     found.map(r=>`<tr${grande(r,extrasC)?' class="big"':''}><td>${r.fecha}</td><td>${esc(r.nombre)}</td><td>${esc(r.centro)}</td><td>${fmtT(r)}${flagG(r,extrasC)}</td><td>${(r.minutos/60).toFixed(2)}</td><td class="obs">${esc(r.obs)}</td>${sup()?`<td><button class="lnk ed" data-aedit="${r.id}">Editar</button> <button class="lnk" data-adel="${r.id}">Eliminar</button></td>`:''}</tr>`).join('')+'</table>'
     : '<div class="empty">No hay registros con esos filtros. Prueba ampliando las fechas.</div>';
   rs($('#res'));
@@ -869,7 +869,7 @@ function resumenSheet(data, n){
 }
 $('#xBtn').onclick = () => {
   if(!found.length) return toast('Primero consulta para tener datos que exportar.', true);
-  const data = found.map(r=>({Fecha:r.fecha, Usuario:r.nombre, 'Centro de costos':r.centro, Cantidad:r.cantidad, Unidad:r.unidad, 'Horas equivalentes':+(r.minutos/60).toFixed(2), Observaciones:r.obs}));
+  const data = found.map(r=>({Fecha:r.fecha, Usuario:r.nombre, 'Centro de costos':r.centro, Cantidad:r.cantidad, Unidad:r.unidad, 'Horas equivalentes':+(r.minutos/60).toFixed(2), 'Actividad Realizada':r.obs}));
   const ws = XLSX.utils.json_to_sheet(data); ws['!cols']=[{wch:12},{wch:26},{wch:34},{wch:10},{wch:10},{wch:18},{wch:60}];
   /* Fila de total al final de "Horas equivalentes" */
   const n = data.length, fila = n + 2;
@@ -896,7 +896,7 @@ async function backupData(btn){
 const fmtDT = ms => ms ? new Date(ms).toLocaleString('es-CO') : '';
 $('#bkX').onclick = async () => {
   const rows = await backupData($('#bkX')); if(!rows) return;
-  const reg = rows.map(r=>({Fecha:r.fecha, Usuario:r.nombre, 'Centro de costos':r.centro, Cantidad:r.cantidad, Unidad:r.unidad, Minutos:r.minutos, 'Horas equivalentes':+(r.minutos/60).toFixed(2), Observaciones:r.obs, Creado:fmtDT(r.creado), Editado:fmtDT(r.editado), ID:r.id, UID:r.uid}));
+  const reg = rows.map(r=>({Fecha:r.fecha, Usuario:r.nombre, 'Centro de costos':r.centro, Cantidad:r.cantidad, Unidad:r.unidad, Minutos:r.minutos, 'Horas equivalentes':+(r.minutos/60).toFixed(2), 'Actividad Realizada':r.obs, Creado:fmtDT(r.creado), Editado:fmtDT(r.editado), ID:r.id, UID:r.uid}));
   const usr = users.map(u=>({Nombre:u.nombre, Correo:u.email, Rol:u.rol, Estado:u.activo===false?'Inactivo':'Activo', UID:u.id}));
   const wb = XLSX.utils.book_new();
   const w1 = XLSX.utils.json_to_sheet(reg); w1['!cols']=[{wch:12},{wch:26},{wch:34},{wch:10},{wch:10},{wch:10},{wch:18},{wch:60},{wch:20},{wch:20},{wch:24},{wch:30}];
