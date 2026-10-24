@@ -795,7 +795,7 @@ function renderMine(){
   const q = norm($('#mQ').value).split(/\s+/).filter(Boolean), d = $('#mD').value, h = $('#mH').value;
   const f = mineList.filter(r => (!d||r.fecha>=d) && (!h||r.fecha<=h) && q.every(w => norm(r.centro+' '+r.obs).includes(w)));
   const l = f.slice(0, mineShown);
-  $('#mine').innerHTML = l.length ? `<table><tr><th>Fecha</th><th>Centro de costos</th><th>Tiempo</th><th>Observaciones</th><th></th></tr>`+
+  $('#mine').innerHTML = l.length ? `<table><tr><th>Fecha</th><th>Centro de costos</th><th>Tiempo</th><th>Actividad Realizada</th><th></th></tr>`+
     l.map(r=>`<tr${grande(r,extrasM)?' class="big"':''}><td>${r.fecha}</td><td>${esc(r.centro)}</td><td>${fmtT(r)}${flagG(r,extrasM)}</td><td class="obs">${esc(r.obs)}</td><td>${puedeEditar(r)?`<button class="lnk ed" data-edit="${r.id}">Editar</button> <button class="lnk" data-del="${r.id}">Eliminar</button>`:'<span class="lock" title="Solo se editan registros de hoy y ayer">Bloqueado</span>'}</td></tr>`).join('')+'</table>'
     : (mineList.length ? '<div class="empty">Ningún registro coincide con los filtros.</div>' : '<div class="empty">Aún no tienes registros. Completa el formulario de arriba.</div>');
   rs($('#mine'));
