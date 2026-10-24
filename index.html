@@ -1002,7 +1002,8 @@ async function loadMissing(){
     const n = +$('#mDias').value, desde = addDays(today(), -(n-1));
     const s = await db.collection('registros').where('fecha','>=',desde).get();
     const con = new Set(s.docs.map(x=>x.data().uid));
-    const faltan = users.filter(u => u.activo!==false && !con.has(u.id));
+    const exento = u => u.rol==='administrador' || u.rol==='directivo' || norm(nomPerfil(u.rol))==='directivo';
+    const faltan = users.filter(u => u.activo!==false && !exento(u) && !con.has(u.id));
     $('#miss').innerHTML = faltan.length ? faltan.map(u=>`<span class="chip warn">${esc(u.nombre)}</span>`).join('')
       : '<span class="chip">Todos los usuarios activos registraron tiempo en este periodo.</span>';
   }catch(e){ $('#miss').innerHTML = '<span class="chip">No se pudo cargar: '+esc(e.message)+'</span>'; }
