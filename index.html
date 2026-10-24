@@ -506,7 +506,7 @@ function calcExtra(list){
 }
 let extrasM = {}, extrasC = {};                          // Mis registros / Consulta
 const grande = (r, m) => !!m[r.id];
-const flagG = (r, m) => m[r.id] ? `<span class="flag">+${hh(m[r.id])} h extra</span>` : '';
+const flagG = (r, m) => m[r.id] ? `<span class="flag">+${hh(m[r.id])} h adicionales</span>` : '';
 /* Solo el administrador puede tocar registros antiguos; los demás perfiles, únicamente hoy y ayer */
 const puedeEditar = r => sup() || r.fecha >= addDays(today(), -1);
 const MSG_VENTANA = 'Solo puedes editar o eliminar registros del día de hoy y del día anterior.';
@@ -522,7 +522,7 @@ function renderDay(){
     const pct = Math.min(100, Math.round(tot/MIN_DIA*100));
     html = warn
       ? `<b>Jornada incompleta (${esc(f)}):</b> llevas ${hh(tot)} h de 8 h. Te faltan <b>${hh(MIN_DIA-tot)} h</b> para el mínimo diario.`
-      : `<b>Jornada completa (${esc(f)}):</b> ${hh(tot)} h registradas. ¡Cumples el mínimo de 8 h!${tot>MIN_DIA?` (+${hh(tot-MIN_DIA)} h extra)`:''}`;
+      : `<b>Jornada completa (${esc(f)}):</b> ${hh(tot)} h registradas. ¡Cumples el mínimo de 8 h!${tot>MIN_DIA?` (+${hh(tot-MIN_DIA)} h adicionales)`:''}`;
     html += `<div class="bar"><i style="width:${pct}%"></i></div>`;
   }else{
     const fe = festivos.find(x => x.fecha === f);
