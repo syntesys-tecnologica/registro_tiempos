@@ -958,9 +958,10 @@ $('#rsBtn').onclick = async () => {
 
 /* ---------- Dashboard ---------- */
 const charts = {};
-/* Un color distinto por usuario (hasta 24; luego se generan). Se asigna por orden alfabético, así cada persona conserva su color */
-const PAL = ['#FFE600','#2a2a2d','#1f77b4','#d62728','#2ca02c','#ff7f0e','#9467bd','#17becf','#e377c2','#8c564b','#7f7f7f','#bcbd22','#0b3d91','#8fd14f','#c2185b','#00897b','#f4a261','#5e60ce','#a0522d','#40c4ff','#b5838d','#6a994e','#ff5d8f','#455a64'];
-const colorDe = i => i < PAL.length ? PAL[i] : `hsl(${Math.round((i*137.508)%360)},60%,48%)`;
+/* Un color distinto por usuario, en la gama de la marca (amarillo, ámbar, dorados y grises). Se asigna por orden alfabético, así cada persona conserva su color */
+const PAL = ['#FFE600','#2a2a2d','#B8860B','#b5b5b0','#FF9F1C','#4a4a4f','#FFF3A0','#9A5B00','#8e8e93','#F2B705','#4D4A00','#d9d9d4','#D97706','#6b6b70','#C8C46A','#C2410C','#7A6A00','#F7C873'];
+/* Más allá de 18 usuarios se generan tonos dorados/ámbar con luminosidad variable, para mantener la identidad */
+const colorDe = i => i < PAL.length ? PAL[i] : `hsl(${40+(i*11)%20},${55+(i*7)%30}%,${28+(i*17)%48}%)`;
 if(window.Chart) Chart.defaults.font.family = "'Barlow',sans-serif";
 $('#dD').value = today().slice(0,8)+'01'; $('#dH').value = today();
 function drawChart(id, cfg){ if(charts[id]) charts[id].destroy(); charts[id] = new Chart($('#'+id), cfg); }
