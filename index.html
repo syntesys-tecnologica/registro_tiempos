@@ -958,7 +958,9 @@ $('#rsBtn').onclick = async () => {
 
 /* ---------- Dashboard ---------- */
 const charts = {};
-const PAL = ['#2a2a2d','#FFE600','#6b6b70','#e6cf00','#4a4a4f','#bdbdb6','#8a7f00','#a5a5a0','#d4d4d0'];
+/* Un color distinto por usuario (hasta 24; luego se generan). Se asigna por orden alfabético, así cada persona conserva su color */
+const PAL = ['#FFE600','#2a2a2d','#1f77b4','#d62728','#2ca02c','#ff7f0e','#9467bd','#17becf','#e377c2','#8c564b','#7f7f7f','#bcbd22','#0b3d91','#8fd14f','#c2185b','#00897b','#f4a261','#5e60ce','#a0522d','#40c4ff','#b5838d','#6a994e','#ff5d8f','#455a64'];
+const colorDe = i => i < PAL.length ? PAL[i] : `hsl(${Math.round((i*137.508)%360)},60%,48%)`;
 if(window.Chart) Chart.defaults.font.family = "'Barlow',sans-serif";
 $('#dD').value = today().slice(0,8)+'01'; $('#dH').value = today();
 function drawChart(id, cfg){ if(charts[id]) charts[id].destroy(); charts[id] = new Chart($('#'+id), cfg); }
@@ -991,9 +993,19 @@ async function loadDash(){
   drawChart('gD', {type:'line', data:{labels:byD.map(x=>x[0]), datasets:[{label:'Horas', data:byD.map(x=>r2(x[1])), borderColor:'#2a2a2d', backgroundColor:'rgba(255,230,0,.35)', fill:true, tension:.3, pointBackgroundColor:'#FFE600', pointBorderColor:'#2a2a2d'}]},
     options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}}}});
 
-  let us = byU.slice(0,8); const rest = byU.slice(8).reduce((t,x)=>t+x[1],0); if(rest>0) us.push(['Otros',rest]);
-  drawChart('gU', {type:'doughnut', data:{labels:us.map(x=>x[0]), datasets:[{data:us.map(x=>r2(x[1])), backgroundColor:PAL, borderColor:'#fff', borderWidth:2}]},
-    options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom', labels:{boxWidth:12}}}}});
+  const us = byU;                                          // todos los usuarios, sin agrupar en "Otros"
+  const orden = [...us.map(x=>x[0])].sort((a,b)=>a.localeCompare(b,'es'));
+  const colU = us.map(x => colorDe(orden.indexOf(x[0])));
+  const totU = us.reduce((t,x)=>t+x[1],0) || 1;
+  const gb = $('#gU').parentElement, ancho = window.innerWidth > 760;
+  gb.style.height = ancho ? Math.max(300, Math.ceil(us.length/2)*26+60)+'px' : Math.max(260, 220+us.length*24)+'px';
+  drawChart('gU', {type:'doughnut', data:{labels:us.map(x=>x[0]), datasets:[{data:us.map(x=>r2(x[1])), backgroundColor:colU, borderColor:'#fff', borderWidth:2}]},
+    options:{responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{position: ancho ? 'right' : 'bottom', labels:{boxWidth:12, padding:8, font:{size:12},
+          generateLabels:ch => ch.data.labels.map((l,i)=>({text:`${cut(l,24)} · ${ch.data.datasets[0].data[i]} h`, fillStyle:colU[i], strokeStyle:'#fff', lineWidth:1, index:i, hidden:!ch.getDataVisibility(i)}))},
+          onClick:(e,it,lg)=>{ lg.chart.toggleDataVisibility(it.index); lg.chart.update(); }},
+        tooltip:{callbacks:{label:c=>` ${c.label}: ${c.parsed} h (${(c.parsed/totU*100).toFixed(1)}%)`}}}}});
   loadMissing();
 }
 const addDays = (str,n) => { const [y,m,d]=str.split('-').map(Number); const t=new Date(y,m-1,d+n); return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`; };
