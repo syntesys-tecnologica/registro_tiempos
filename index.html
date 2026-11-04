@@ -260,6 +260,8 @@ tr.big td:first-child{box-shadow:inset 5px 0 0 var(--ink)}
     <section id="t-reg">
       <div class="card">
         <h2 style="margin-bottom:1rem">Registrar tiempo</h2>
+        <div class="f hide" id="paraBox"><label for="rPara">Registrar para</label><select id="rPara"></select>
+          <p class="hint">Como administrador puedes registrar tiempo de cualquier usuario y en cualquier fecha, por ejemplo para completar información que no se registró.</p></div>
         <p class="hint hide" id="rInfo" style="margin:-.4rem 0 1rem;font-size:1rem"></p>
         <div id="dayB" class="dayb hide" role="status" aria-live="polite"></div>
         <div id="dayP" class="dayb warn hide" role="status" aria-live="polite"></div>
@@ -470,6 +472,26 @@ let me = null, centros = [], users = [], found = [];
 function toast(msg, err){ const t=$('#toast'); t.textContent=msg; t.className=err?'err':''; setTimeout(()=>t.classList.add('hide'),4000); }
 const sup = () => me && me.rol === 'administrador';
 
+/* ---------- El administrador registra tiempo en nombre de otro usuario ---------- */
+let paraList = [];                                       // registros del usuario elegido (para el aviso de jornada)
+const objetivo = () => { const v = sup() && $('#rPara') ? $('#rPara').value : ''; return v && v !== me.uid ? (users.find(x => x.id === v) || null) : null; };
+function fillPara(){
+  const sb = $('#rPara'); if(!sb || !me) return; const v = sb.value;
+  sb.innerHTML = `<option value="${me.uid}">Yo (${esc(me.nombre)})</option>` + users.filter(u => u.id !== me.uid)
+    .map(u => `<option value="${u.id}">${esc(u.nombre)}${u.activo===false?' (inactivo)':''}</option>`).join('');
+  sb.value = [...sb.options].some(o => o.value === v) ? v : me.uid;
+  $('#paraBox').classList.toggle('hide', !sup() || !!editId);
+}
+async function loadPara(){
+  const ob = objetivo();
+  if(!editId){ $('#rInfo').textContent = ob ? `Estás registrando tiempo para ${ob.nombre}.` : ''; $('#rInfo').classList.toggle('hide', !ob); }
+  if(!ob){ paraList = []; return renderDay(); }
+  try{ const q = await db.collection('registros').where('uid','==',ob.id).get(); paraList = q.docs.map(d => ({id:d.id, ...d.data()})); }
+  catch(e){ paraList = []; toast('No se pudieron leer los registros de '+ob.nombre+'.', true); }
+  renderDay();
+}
+$('#rPara').addEventListener('change', loadPara);
+
 /* ---------- Jornada mínima y ventana de edición ---------- */
 const MIN_DIA = 480;                                   // mínimo diario: 8 horas (en minutos)
 const hh = m => (m/60).toFixed(2).replace(/\.?0+$/,'');
@@ -492,7 +514,7 @@ async function saveFes(n, msg){
   try{ await db.collection('config').doc('festivos').set({lista:n, actualizado:Date.now(), por:me.nombre}); festivos = n; renderFes(); renderDay(); toast(msg); return true; }
   catch(err){ toast('No se pudo guardar: '+err.message, true); return false; }
 }
-const dayMin = f => mineList.filter(r => r.fecha === f).reduce((t,r) => t + r.minutos, 0);
+const dayMin = f => (objetivo() ? paraList : mineList).filter(r => r.fecha === f).reduce((t,r) => t + r.minutos, 0);
 /* Horas extra: dentro de cada día y usuario, se suman los registros en el orden en que se crearon;
    el registro que hace pasar el total de 8 h (y los siguientes) queda resaltado con sus horas extra */
 function calcExtra(list){
@@ -515,13 +537,15 @@ const MSG_FECHA = 'Solo puedes registrar tiempo del día de hoy y del día anter
 const fechaOk = f => sup() || (f >= addDays(today(), -1) && f <= today());
 function renderDay(){
   const b = $('#dayB'); if(!b || !me) return;
-  const f = $('#rF').value || today(), tot = dayMin(f), lab = esLab(f);
+  const f = $('#rF').value || today(), tot = dayMin(f), lab = esLab(f), quien = (objetivo()||{}).nombre || '';
   const ayer = addDays(today(), -1);
   let html = '', pend = '', warn = false;
   if(lab){
     warn = tot < MIN_DIA;
     const pct = Math.min(100, Math.round(tot/MIN_DIA*100));
-    html = warn
+    html = quien ? (warn
+      ? `<b>${esc(quien)} · ${esc(f)}:</b> ${hh(tot)} h de 8 h. Faltan <b>${hh(MIN_DIA-tot)} h</b> para el mínimo diario.`
+      : `<b>${esc(quien)} · ${esc(f)}:</b> ${hh(tot)} h registradas. Cumple el mínimo de 8 h${tot>MIN_DIA?` (+${hh(tot-MIN_DIA)} h adicionales)`:''}.`) : warn
       ? `<b>Jornada incompleta (${esc(f)}):</b> llevas ${hh(tot)} h de 8 h. Te faltan <b>${hh(MIN_DIA-tot)} h</b> para el mínimo diario.`
       : `<b>Jornada completa (${esc(f)}):</b> ${hh(tot)} h registradas. ¡Cumples el mínimo de 8 h!${tot>MIN_DIA?` (+${hh(tot-MIN_DIA)} h adicionales)`:''}`;
     html += `<div class="bar"><i style="width:${pct}%"></i></div>`;
@@ -529,7 +553,7 @@ function renderDay(){
     const fe = festivos.find(x => x.fecha === f);
     html = fe ? `<b>Día festivo</b>${fe.nombre ? ' · '+esc(fe.nombre) : ''}` : '<b>Fin de semana</b>';
   }
-  if(f!==ayer && esLab(ayer) && dayMin(ayer) < MIN_DIA){
+  if(!quien && f!==ayer && esLab(ayer) && dayMin(ayer) < MIN_DIA){
     const ha = dayMin(ayer);
     pend = ha === 0
       ? `<b>Pendiente:</b> ayer (${esc(ayer)}) no has registrado horas. Aún puedes completarlo hoy.`
@@ -749,10 +773,11 @@ $('#rBtn').onclick = async () => {
       endEdit(); toast('Registro actualizado.');
       if(back){ go('con'); $('#cBtn').click(); }
     }else{
-      await db.collection('registros').add({...r, uid:me.uid, nombre:me.nombre, creado:Date.now()});
-      $('#rQ').value=''; $('#rO').value=''; $('#rC').value=''; toast('Registro guardado.');
+      const ob = objetivo();
+      await db.collection('registros').add({...r, uid: ob ? ob.id : me.uid, nombre: ob ? ob.nombre : me.nombre, creado:Date.now()});
+      $('#rQ').value=''; $('#rO').value=''; $('#rC').value=''; toast(ob ? 'Registro guardado para '+ob.nombre+'.' : 'Registro guardado.');
     }
-    await loadMine();
+    await loadMine(); if(objetivo()) await loadPara();
     if(esLab(r.fecha) && dayMin(r.fecha) > MIN_DIA) toast(`Registro guardado. El ${r.fecha} suma ${hh(dayMin(r.fecha))} h: ${hh(dayMin(r.fecha)-MIN_DIA)} h por encima de las 8 h.`, true);
     else avisoDia(r.fecha);
   }catch(e){ toast('No se pudo guardar: '+e.message, true); }
@@ -764,7 +789,7 @@ function startEdit(id){
   if(!puedeEditar(r)) return toast(MSG_VENTANA, true);
   editFrom = $('#t-con').classList.contains('hide') ? 'reg' : 'con';
   if(editFrom==='con') go('reg');
-  editId = id;
+  editId = id; $('#rPara').value = me.uid; paraList = []; $('#paraBox').classList.add('hide');
   const ajeno = r.uid !== me.uid;
   $('#rInfo').textContent = ajeno ? `Estás editando un registro de ${r.nombre}.` : '';
   $('#rInfo').classList.toggle('hide', !ajeno);
@@ -774,7 +799,7 @@ function startEdit(id){
   $('#t-reg').scrollIntoView({behavior:'smooth', block:'start'});
 }
 function endEdit(){
-  editId = null; editFrom = '';
+  editId = null; editFrom = ''; if(sup()) $('#paraBox').classList.remove('hide');
   $('#rInfo').classList.add('hide');
   $('#rQ').value=''; $('#rO').value=''; $('#rC').value=''; $('#rF').value = today(); $('#rU').value = 'horas';
   $('#rBtn').textContent = 'Guardar registro'; $('#rCan').classList.add('hide');
@@ -818,6 +843,7 @@ $('#mine').onclick = async e => {
 async function loadUsers(){
   const s = await db.collection('users').get();
   users = s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.nombre.localeCompare(b.nombre));
+  fillPara();
   const opt = '<option value="">Todos</option>' + users.map(u=>`<option value="${u.id}">${esc(u.nombre)}${u.activo===false?' (inactivo)':''}</option>`).join('');
   $('#cU').innerHTML = opt;
   const dv = $('#dU').value; $('#dU').innerHTML = opt; $('#dU').value = dv;
