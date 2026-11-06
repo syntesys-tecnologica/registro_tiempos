@@ -270,7 +270,7 @@ tr.big td:first-child{box-shadow:inset 5px 0 0 var(--ink)}
           <div class="f"><label for="rC">Centro de costos</label>
             <div class="ac"><input id="rC" placeholder="Escribe para buscar…" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false"><div class="ac-list hide" id="rCl" role="listbox"></div></div></div>
           <div class="f"><label for="rQ">Tiempo invertido</label>
-            <div class="qty"><input id="rQ" type="number" inputmode="decimal" min="0.01" step="any" placeholder="Cantidad">
+            <div class="qty"><input id="rQ" type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*" autocomplete="off" placeholder="Ej: 1.5 o 1,5">
             <select id="rU" aria-label="Unidad"><option value="horas">Horas</option><option value="minutos">Minutos</option></select></div></div>
         </div>
         <div class="f"><label for="rO">Actividad Realizada</label><textarea id="rO" placeholder="¿Qué hiciste en este centro de costos?"></textarea></div>
@@ -758,8 +758,15 @@ autocomplete($('#cC'), $('#cCl'));
 autocomplete($('#dC'), $('#dCl'));
 
 /* ---------- Registrar tiempo ---------- */
+/* Cantidad: acepta punto o coma como separador decimal (teclados móviles en español solo muestran la coma) */
+$('#rQ').addEventListener('input', e => {
+  let v = e.target.value.replace(/[^0-9.,]/g,'').replace(/,/g,'.');
+  const i = v.indexOf('.'); if(i >= 0) v = v.slice(0,i+1) + v.slice(i+1).replace(/\./g,'');
+  if(v !== e.target.value) e.target.value = v;
+});
+const leerCant = () => parseFloat(String($('#rQ').value).trim().replace(',','.'));
 $('#rBtn').onclick = async () => {
-  const r = {fecha:$('#rF').value, centro:$('#rC').value.trim(), cantidad:parseFloat($('#rQ').value), unidad:$('#rU').value, obs:$('#rO').value.trim()};
+  const r = {fecha:$('#rF').value, centro:$('#rC').value.trim(), cantidad:leerCant(), unidad:$('#rU').value, obs:$('#rO').value.trim()};
   if(!r.fecha) return toast('Selecciona la fecha.', true);
   if(!centros.includes(r.centro)) return toast('Elige un centro de costos de la lista.', true);
   if(!(r.cantidad > 0)) return toast('Escribe una cantidad mayor a cero.', true);
